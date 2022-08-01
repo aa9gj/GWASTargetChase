@@ -1,0 +1,31 @@
+Package: HillsGWASfollowup
+Title: Prioritization of Feline GWAS genes
+Version: 1.0.0.0
+Authors@R: 
+    person("Arby", "Abood", , "aa9gj@virginia.edu", role = c("aut", "cre"))
+Description: Prioritization of Feline GWAS genes using OpenTargets, TWAS-hub and IMPC data.
+            The data has been prepared outside the package (see documentation) and are loaded internally within this package for portability. 
+License: use_mit_license()
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.0
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
+Imports:
+    GenomicRanges,
+    data.table,
+    dplyr,
+    rtracklayer,
+    arrow,
+    jsonlite,
+    S4Vectors,
+    tibble,
+    magrittr,
+    ggplot2,
+    grDevices,
+    patchwork
+LazyData: true
