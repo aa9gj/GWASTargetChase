@@ -186,7 +186,7 @@ If you use `gwasFollowup` function, here is the output you would get: \
 - **l2g_filtered**: Interesting results and includes the following columns:\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1. study_id: GWAS study id from GWAS catalog\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2. gene_id: Ensembl gene ID\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3. full_l2g_score: L2G model score from OpenTargets which is explained as the probability of the gene being causal at that locus. This score is calculated from the next four columns in the output (find out more about this here <https://genetics-docs.opentargets.org/our-approach/prioritising-causal-genes-at-gwas-loci-l2g>\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3. full_l2g_score: L2G model score from OpenTargets which is explained as the probability of the gene being causal at that locus. This score is calculated from the next four columns in the output (find out more about this [here](https://genetics-docs.opentargets.org/our-approach/prioritising-causal-genes-at-gwas-loci-l2g)\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4. y_proba_logi_distance, y_proba_logi_interaction, y_proba_logi_molecularQTL, y_proba_logi_pathogenicity: The next four columns that are used to calculate the full model\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5. trait_reported: The annotation for the GWAS study id\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;6. trait_category: The type of trait being studied\
