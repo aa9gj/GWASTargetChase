@@ -24,10 +24,10 @@ Research funding has been poured into generating resources of GWAS follow-up dat
 
 The human GWAS follow-up data is obtained from the following sources: \
 
-- OpenTargets <https://www.opentargets.org/>\
-- IMPC <https://www.mousephenotype.org/>\
-- PhenomeXcan <http://apps.hakyimlab.org/phenomexcan/>\
-- Relevant WebTWAS traits <http://www.webtwas.net/#/diseases>\
+- [OpenTargets](https://www.opentargets.org/)\
+- [IMPC](https://www.mousephenotype.org/)\
+- [PhenomeXcan](http://apps.hakyimlab.org/phenomexcan/)\
+- [Relevant WebTWAS traits](http://www.webtwas.net/#/diseases)\
 
 The data from OpenTargets and IMPC has been wrangled and loaded onto the package (check functions section for reproducing the data). The data from PhenomeXcan and WebTWAS can be downloaded and prepared using functions within this package. 
 
