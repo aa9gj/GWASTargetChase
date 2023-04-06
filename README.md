@@ -70,10 +70,10 @@ gunzip Felis_catus.Felis_catus_9.0.106.gtf.gz
 
 There are 7 exported functions within this package  `gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `IMPCprep`, `l2gPrepMan`, `geneticAssocPrepMan`, and `phenomePrep`
 
-Please ensure that your sumStats file has the following column names exactly as such: (The rest can stay as is)\
-- `p_wald`: This would be the corrected p-values\
-- `ps`: SNP position\
-- `chr`: chromosome\
+Please ensure that your sumStats file has the following column names exactly as such: (The rest can stay as is)
+- `p_wald`: This would be the corrected p-values
+- `ps`: SNP position
+- `chr`: chromosome
 
 ## gwasFollouwp
 
