@@ -192,5 +192,5 @@ If you use `gwasFollowup` function, here is the output you would get: \
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;6. trait_category: The type of trait being studied\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;7. gene_name: Gene name from Ensembl\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8. IMPC_results: Functional impact of the gene knockout in mice\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;9. rs (and all following columns): SNP information from feline GWAS summary statistics\ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;9. rs (and all following columns): SNP information from feline GWAS summary statistics
 - **plots**: LocusZoom plots for all significant loci (p_wald > 5)
