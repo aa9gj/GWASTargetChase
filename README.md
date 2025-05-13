@@ -1,20 +1,3 @@
----
-title: "HillsGWASfollowup Package Documentation"
-author: "Arby Abood"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
-output:
-  html_document:
-    toc: true
-    toc_depth: 3
-    theme: united
-    number_sections: true
-    highlight: tango
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 # Purpose
 
 Complex diseases are disorders that result from multiple genetic variants and genes coupled with influences from the environment. One way to study complex disease is Genome-wide association studies (GWAS). GWAS is an approach to study cohorts (populations) and associate loci (genomic regions containing multiple variants and genes) to complex diseases. However, a main challenge to interpreting GWAS results is 90% of these loci are found within intronic or intergenic regions suggesting they are involved in gene regulation rather than affecting the gene sequence. Therefore, GWAS follow-up (i.e.using multi-omics data and approaches to pin point causal genes) has been used as a tool in human genetics to identify causal genes in complex diseases and therefore hone in on potential therapeutic and intervention targets. \
