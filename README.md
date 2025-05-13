@@ -1,12 +1,12 @@
 # Purpose
 
-Complex diseases are disorders that result from multiple genetic variants and genes coupled with influences from the environment. One way to study complex disease is Genome-wide association studies (GWAS). GWAS is an approach to study cohorts (populations) and associate loci (genomic regions containing multiple variants and genes) to complex diseases. However, a main challenge to interpreting GWAS results is 90% of these loci are found within intronic or intergenic regions suggesting they are involved in gene regulation rather than affecting the gene sequence. Therefore, GWAS follow-up (i.e.using multi-omics data and approaches to pin point causal genes) has been used as a tool in human genetics to identify causal genes in complex diseases and therefore hone in on potential therapeutic and intervention targets. \
+Complex diseases are disorders that result from multiple genetic variants and genes coupled with influences from the environment. One way to study complex disease is Genome-wide association studies (GWAS). GWAS is an approach to study cohorts (populations) and associate loci (genomic regions containing multiple variants and genes) to complex diseases. However, a main challenge to interpreting GWAS results is 90% of these loci are found within intronic or intergenic regions suggesting they are involved in gene regulation rather than affecting the gene sequence. Therefore, GWAS follow-up (i.e.using multi-omics data and approaches to pin point causal genes) has been used as a tool in human genetics to identify causal genes in complex diseases and therefore hone in on potential therapeutic and intervention targets.
 
 Research funding has been poured into generating resources of GWAS follow-up data in humans given the success this approach has shown in identifying gene targets. However, other species are lagging behind due to the lack of funding. Therefore, the idea to use humans as a model system for feline complex disease could potentially point to genes of interest to feline health. Thus, the purpose of this package is to prepare, and utilize data from human studies to follow up on feline and/or K9 GWAS summary statistics. 
 
 # Data Curation
 
-The human GWAS follow-up data is obtained from the following sources: \
+The human GWAS follow-up data is obtained from the following sources:
 
 - [OpenTargets](https://www.opentargets.org/)
 - [IMPC](https://www.mousephenotype.org/)
