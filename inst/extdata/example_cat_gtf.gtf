@@ -1,0 +1,16 @@
+##description: Example GTF file for testing GWASTargetChase package
+##provider: Ensembl
+##format: gtf
+##date: 2024-01-01
+1	ensembl	gene	52786615	53886615	.	+	.	gene_id "ENSFCAG00000000001"; gene_name "FTO"; gene_biotype "protein_coding";
+1	ensembl	transcript	52786615	53886615	.	+	.	gene_id "ENSFCAG00000000001"; gene_name "FTO"; transcript_id "ENSFCAT00000000001"; gene_biotype "protein_coding";
+1	ensembl	exon	52786615	52787000	.	+	.	gene_id "ENSFCAG00000000001"; gene_name "FTO"; transcript_id "ENSFCAT00000000001"; gene_biotype "protein_coding";
+2	ensembl	gene	44182527	46182527	.	+	.	gene_id "ENSFCAG00000000002"; gene_name "GNPDA2"; gene_biotype "protein_coding";
+2	ensembl	transcript	44182527	46182527	.	+	.	gene_id "ENSFCAG00000000002"; gene_name "GNPDA2"; transcript_id "ENSFCAT00000000002"; gene_biotype "protein_coding";
+2	ensembl	exon	44182527	44183000	.	+	.	gene_id "ENSFCAG00000000002"; gene_name "GNPDA2"; transcript_id "ENSFCAT00000000002"; gene_biotype "protein_coding";
+2	ensembl	gene	600000	700000	.	-	.	gene_id "ENSFCAG00000000003"; gene_name "TMEM18"; gene_biotype "protein_coding";
+2	ensembl	transcript	600000	700000	.	-	.	gene_id "ENSFCAG00000000003"; gene_name "TMEM18"; transcript_id "ENSFCAT00000000003"; gene_biotype "protein_coding";
+2	ensembl	exon	600000	601000	.	-	.	gene_id "ENSFCAG00000000003"; gene_name "TMEM18"; transcript_id "ENSFCAT00000000003"; gene_biotype "protein_coding";
+16	ensembl	gene	52786615	54800954	.	+	.	gene_id "ENSFCAG00000000004"; gene_name "FTO"; gene_biotype "protein_coding";
+16	ensembl	transcript	52786615	54800954	.	+	.	gene_id "ENSFCAG00000000004"; gene_name "FTO"; transcript_id "ENSFCAT00000000004"; gene_biotype "protein_coding";
+16	ensembl	exon	52786615	52787500	.	+	.	gene_id "ENSFCAG00000000004"; gene_name "FTO"; transcript_id "ENSFCAT00000000004"; gene_biotype "protein_coding";
