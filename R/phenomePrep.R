@@ -11,8 +11,8 @@
 #' @export phenomePrep
 
 phenomePrep <- function(phenome, gtf, ResultsPath = ".") {
-  phenome <- as.data.frame(fread("/Users/Arby Abood/Documents/Internship_project/PhenomeXcan_bulk_download/fastenloc-torus-rcp.tsv"))
-  gtf <- as.data.frame(rtracklayer::import("/Users/Arby Abood/Documents/Internship_project/genome references/gencode.v40.annotation.gtf.gz"))
+  phenome <- as.data.frame(fread(phenome))
+  gtf <- as.data.frame(rtracklayer::import(gtf))
   gtf <- filter(gtf, type == "gene", gene_type == "protein_coding")
   gtf <- gtf[, c("gene_id", "gene_name")]
   gtf$gene_id <- gsub("\\..*", "", gtf$gene_id)

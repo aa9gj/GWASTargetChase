@@ -5,7 +5,7 @@ Authors@R:
     person("Arby", "Abood", , "aa9gj@virginia.edu", role = c("aut", "cre"))
 Description: Prioritization of GWAS genes using OpenTargets, TWAS-hub and IMPC data.
             The data has been prepared outside the package (see documentation) and are loaded internally within this package for portability. 
-License: use_mit_license()
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.0
@@ -26,6 +26,7 @@ Imports:
     tibble,
     magrittr,
     ggplot2,
+    ggpubr,
     grDevices,
     patchwork
-LazyData: true
+LazyData: false
