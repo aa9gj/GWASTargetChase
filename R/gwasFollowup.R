@@ -20,11 +20,29 @@
 gwasFollowup <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = ".") {
   # Read in GTF file for cats and keep only pc genes
   print("Loading OpenTargets Genetic Association file from this package")
-  data("disease_target_genetic_association")
+  tryCatch({
+    data("disease_target_genetic_association", envir = environment())
+  }, error = function(e) {
+    stop("Required data 'disease_target_genetic_association' not found. ",
+         "Please use gwasFollowupMan() with your own prepared data files, ",
+         "or prepare the data using geneticAssocPrep(). See ?geneticAssocPrep for details.")
+  })
   print("Loading OpenTargets locus to gene file from this package")
-  data("l2g_annotated_full")
+  tryCatch({
+    data("l2g_annotated_full", envir = environment())
+  }, error = function(e) {
+    stop("Required data 'l2g_annotated_full' not found. ",
+         "Please use gwasFollowupMan() with your own prepared data files, ",
+         "or prepare the data using l2gPrep(). See ?l2gPrep for details.")
+  })
   print("loading IMPC phenotype data from this package")
-  data("impc")
+  tryCatch({
+    data("impc", envir = environment())
+  }, error = function(e) {
+    stop("Required data 'impc' not found. ",
+         "Please use gwasFollowupMan() with your own prepared data files, ",
+         "or prepare the data using IMPCprep(). See ?IMPCprep for details.")
+  })
   print("Reading the feline gtf file and filtering for protein coding genes, this might take a while")
   cat_gtf <- as.data.frame(rtracklayer::import(felGTF))
   cat_pc_gene_gtf <- filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")

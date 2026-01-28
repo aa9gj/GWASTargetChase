@@ -21,11 +21,29 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
                              phenomePath = NULL, twasPath = NULL) {
   # Read in GTF file for cats and keep only pc genes
   print("Loading OpenTargets Genetic Association file from this package")
-  data("disease_target_genetic_association")
+  tryCatch({
+    data("disease_target_genetic_association", envir = environment())
+  }, error = function(e) {
+    stop("Required data 'disease_target_genetic_association' not found. ",
+         "Please use gwasFollowupMan() with your own prepared data files, ",
+         "or prepare the data using geneticAssocPrep(). See ?geneticAssocPrep for details.")
+  })
   print("Loading OpenTargets locus to gene file from this package")
-  data("l2g_annotated_full")
+  tryCatch({
+    data("l2g_annotated_full", envir = environment())
+  }, error = function(e) {
+    stop("Required data 'l2g_annotated_full' not found. ",
+         "Please use gwasFollowupMan() with your own prepared data files, ",
+         "or prepare the data using l2gPrep(). See ?l2gPrep for details.")
+  })
   print("Loading IMPC phenotype data")
-  data("impc")
+  tryCatch({
+    data("impc", envir = environment())
+  }, error = function(e) {
+    stop("Required data 'impc' not found. ",
+         "Please use gwasFollowupMan() with your own prepared data files, ",
+         "or prepare the data using IMPCprep(). See ?IMPCprep for details.")
+  })
   if (!is.null(phenomePath)) {
     print("Reading phenomeXcan data")
     phenomeXcan <- fread(phenomePath)
@@ -113,7 +131,7 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
   results_l2g_df <- as.data.frame(do.call("rbind", results_l2g))
   results_l2g_df <- left_join(results_l2g_df, impc, by = "gene_name")
   if (!is.null(phenomeXcan)) {
-    results_l2g_df <- left_join(resulsts_l2g_df, phenomeXcan, by = "gene_name")} else {results_l2g_df <- results_l2g_df}
+    results_l2g_df <- left_join(results_l2g_df, phenomeXcan, by = "gene_name")} else {results_l2g_df <- results_l2g_df}
   if (!is.null(twas)){
     results_l2g_df <- left_join(results_l2g_df, twas, by = c("gene_name" = "Gene"))} else {results_l2g_df<- results_l2g_df}
   print("writing results")
