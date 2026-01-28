@@ -1,4 +1,4 @@
-# HillsGWASfollowup
+# GWASTargetChase
 
 Prioritization of GWAS genes using OpenTargets, TWAS-hub and IMPC data.
 
@@ -39,11 +39,11 @@ BiocManager::install(c("GenomicRanges", "rtracklayer", "S4Vectors"))
 if (!require("remotes", quietly = TRUE))
   install.packages("remotes")
 
-# Install HillsGWASfollowup
+# Install GWASTargetChase
 remotes::install_github("aa9gj/GWASTargetChase")
 
 # Load the package
-library(HillsGWASfollowup)
+library(GWASTargetChase)
 ```
 
 Alternatively, using devtools:

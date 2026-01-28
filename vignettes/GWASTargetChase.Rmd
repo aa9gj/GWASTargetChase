@@ -1,10 +1,10 @@
 ---
-title: "HillsGWASfollowup Package Documentation"
+title: "GWASTargetChase Package Documentation"
 author: "Arby Abood"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{HillsGWASfollowup Package Documentation}
+  %\VignetteIndexEntry{GWASTargetChase Package Documentation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -45,11 +45,11 @@ install.packages(c("data.table", "dplyr", "arrow", "jsonlite",
                    "tibble", "magrittr", "ggplot2", "ggpubr",
                    "patchwork", "remotes"))
 
-# Install HillsGWASfollowup from GitHub
+# Install GWASTargetChase from GitHub
 remotes::install_github("aa9gj/GWASTargetChase")
 
 # Load the package
-library(HillsGWASfollowup)
+library(GWASTargetChase)
 ```
 
 # Recommended GTF files
