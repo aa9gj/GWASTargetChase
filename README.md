@@ -23,7 +23,7 @@ The data from OpenTargets and IMPC can be prepared using functions within this p
 
 ### Prerequisites
 
-Install Bioconductor dependencies first:
+Requires R >= 3.5.0. Install Bioconductor dependencies first:
 
 ```r
 if (!require("BiocManager", quietly = TRUE))
@@ -139,7 +139,7 @@ gwasFollowupMan(sumStats = "your_gwas_sumstats.txt",
 
 ## Functions
 
-There are 7 exported functions within this package: `gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `IMPCprep`, `l2gPrep`, `geneticAssocPrep`, and `phenomePrep`
+There are 8 exported functions within this package: `gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `gwasFollowuptest`, `IMPCprep`, `l2gPrep`, `geneticAssocPrep`, and `phenomePrep`
 
 ### Input Requirements
 
@@ -261,10 +261,13 @@ phenomePrep(phenome = "/path/to/fastenloc-torus-rcp.tsv",
 
 ## Output
 
-The `gwasFollowup` and `gwasFollowupMan` functions generate:
+All main functions (`gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `gwasFollowuptest`) generate:
 
 - **g2d_results.txt**: Gene-to-disease association scores from OpenTargets
 - **l2g_results.txt**: Full locus-to-gene results
+
+Additionally, `gwasFollowup` generates:
+
 - **l2g_filtered_results.txt**: Filtered results with key columns:
   1. `study_id`: GWAS study ID from GWAS Catalog
   2. `gene_id`: Ensembl gene ID
