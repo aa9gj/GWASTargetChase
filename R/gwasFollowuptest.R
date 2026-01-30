@@ -1,6 +1,6 @@
 #' gwasFollowuptest
 #'
-#' main package function that will take GWAS sumstats, a gtf file, and a pvalue of interest to returns information on the genes of interest
+#' Test version of the main package function that will take GWAS sumstats, a gtf file, and a pvalue of interest to returns information on the genes of interest
 #'
 #' @param sumStats GWAS summary statistics file. It assumed a ps, and chr columns.
 #' @param felGTF GTF file
@@ -8,6 +8,7 @@
 #' @param ResultsPath default is the working directory but you can provide a path of your own ensuring it ends with a /
 #' @param phenomePath path to phenomeXcan data if available default NULL
 #' @param twasPath path to twas data if available default NULL
+#' @return Writes g2d_results.txt and l2g_results.txt to ResultsPath
 #' @importFrom dplyr filter left_join bind_rows select_if if_all
 #' @importFrom magrittr %>%
 #' @importFrom data.table fread
@@ -49,7 +50,8 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
     phenomeXcan <- fread(phenomePath)
   } else {
     phenomeXcan <- NULL
-    print("No phenomeXcan data has been provided")}
+    print("No phenomeXcan data has been provided")
+  }
   if (!is.null(twasPath)) {
     print("Reading TWAS data")
     twas <- fread(twasPath)
@@ -57,13 +59,14 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
     twas <- twas[, c(2:15)]
   } else {
     twas <- NULL
-    print("No TWAS data has been provided")}
+    print("No TWAS data has been provided")
+  }
   print("Reading the feline gtf file and filtering for protein coding genes, this might take a while")
   cat_gtf <- as.data.frame(rtracklayer::import(felGTF))
   cat_pc_gene_gtf <- filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
   print("reading the summary statistics file, filtering based on the input p_value")
   gwas <- fread(sumStats)
-  gwas$chr <- gsub("20", "X", gwas$chr)
+  gwas$chr <- gsub("^20$", "X", gwas$chr)
   sig_gwas <- filter(gwas, p_wald <= pval)
   print("Overlap genes within significant loci (1Mb)")
   sig_gwas$start <- sig_gwas$ps - 1000000
@@ -84,11 +87,14 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
                        width = 50,   # Progress bar width. Defaults to getOption("width")
                        char = "=")   # Character used to create the bar
   for (i in seq_along(genes)) {
-    results_g2d[[i]] <- gene2disease(genes[i])
+    results_g2d[[i]] <- gene2disease(genes[i], disease_target_genetic_association)
     setTxtProgressBar(pb, i)
   }
+  close(pb)
   results_g2d_df <- as.data.frame(do.call("rbind", results_g2d))
-  results_g2d_df <- left_join(results_g2d_df, impc, by = "gene_name")
+  if (nrow(results_g2d_df) > 0) {
+    results_g2d_df <- left_join(results_g2d_df, impc, by = "gene_name")
+  }
   if (!is.null(phenomeXcan)) {
     print("Wrangling phenomeXcan data, this might take a while")
     pheList <- list()
@@ -112,11 +118,13 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
     phenomeXcan <- do.call("bind_rows", pheList)
   }
   if (!is.null(phenomeXcan)) {
-    results_g2d_df <- left_join(results_g2d_df, phenomeXcan, by = "gene_name")} else {results_g2d_df <- results_g2d_df}
-  if (!is.null(twas)){
-    results_g2d_df <- left_join(results_g2d_df, twas, by = c("gene_name" = "Gene"))} else {results_g2d_df<- results_g2d_df}
+    results_g2d_df <- left_join(results_g2d_df, phenomeXcan, by = "gene_name")
+  }
+  if (!is.null(twas)) {
+    results_g2d_df <- left_join(results_g2d_df, twas, by = c("gene_name" = "Gene"))
+  }
   print("writing results")
-  write.table(results_g2d_df, paste0(ResultsPath, "g2d_results.txt"), quote = F, row.names = F, sep = "\t")
+  write.table(results_g2d_df, file.path(ResultsPath, "g2d_results.txt"), quote = F, row.names = F, sep = "\t")
   print("Locus to Genes GWAS follow-up")
   results_l2g <- list()
   pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
@@ -125,16 +133,21 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
                        width = 50,   # Progress bar width. Defaults to getOption("width")
                        char = "=")   # Character used to create the bar
   for (i in seq_along(genes)) {
-    results_l2g[[i]] <- locus2gene(genes[i])
+    results_l2g[[i]] <- locus2gene(genes[i], l2g_annotated_full)
     setTxtProgressBar(pb, i)
   }
+  close(pb)
   results_l2g_df <- as.data.frame(do.call("rbind", results_l2g))
-  results_l2g_df <- left_join(results_l2g_df, impc, by = "gene_name")
+  if (nrow(results_l2g_df) > 0) {
+    results_l2g_df <- left_join(results_l2g_df, impc, by = "gene_name")
+  }
   if (!is.null(phenomeXcan)) {
-    results_l2g_df <- left_join(results_l2g_df, phenomeXcan, by = "gene_name")} else {results_l2g_df <- results_l2g_df}
-  if (!is.null(twas)){
-    results_l2g_df <- left_join(results_l2g_df, twas, by = c("gene_name" = "Gene"))} else {results_l2g_df<- results_l2g_df}
+    results_l2g_df <- left_join(results_l2g_df, phenomeXcan, by = "gene_name")
+  }
+  if (!is.null(twas)) {
+    results_l2g_df <- left_join(results_l2g_df, twas, by = c("gene_name" = "Gene"))
+  }
   print("writing results")
-  write.table(results_l2g_df, paste0(ResultsPath, "l2g_results.txt"), quote = F, row.names = F, sep = "\t")
+  write.table(results_l2g_df, file.path(ResultsPath, "l2g_results.txt"), quote = F, row.names = F, sep = "\t")
   print("All done, happy exploring")
 }

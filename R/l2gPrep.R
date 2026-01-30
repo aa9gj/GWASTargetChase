@@ -31,6 +31,6 @@ l2gPrep <- function(l2gOT, studyOT, humanGTF, ResultsPath = ".") {
   gencode_pc <- gencode_pc[,-c(8,9,13:26)]
   l2g_annotated <- inner_join(l2g_data_annotated_studies, gencode_pc, by = "gene_id")
   print("Writing restuls, this might take a while")
-  write.table(l2g_annotated, paste0(ResultsPath, "l2g_annotated_full"), quote = F, row.names = F, sep = "\t")
+  write.table(l2g_annotated, file.path(ResultsPath, "l2g_annotated_full"), quote = F, row.names = F, sep = "\t")
   print("that's a lot of data, all done!")
 }
