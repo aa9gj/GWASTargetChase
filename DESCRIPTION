@@ -1,10 +1,13 @@
 Package: GWASTargetChase
-Title: Prioritization of Feline GWAS genes
-Version: 1.0.0.0
-Authors@R: 
+Title: GWAS Gene Prioritization using OpenTargets and IMPC
+Version: 2.0.0
+Authors@R:
     person("Arby", "Abood", , "aa9gj@virginia.edu", role = c("aut", "cre"))
-Description: Prioritization of GWAS genes using OpenTargets, TWAS-hub and IMPC data.
-            The data has been prepared outside the package (see documentation) and are loaded internally within this package for portability. 
+Description: Prioritization of GWAS genes using OpenTargets Platform and IMPC
+    (International Mouse Phenotyping Consortium) data. Supports human, mouse,
+    cat, and dog GWAS analysis with automatic GTF annotation download and caching.
+    Fetches gene-disease associations from OpenTargets API and mouse knockout
+    phenotypes from IMPC API.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -13,7 +16,9 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
-    httr
+    httr,
+    rappdirs,
+    R.utils
 VignetteBuilder: knitr
 Depends: 
     R (>= 3.5.0)
