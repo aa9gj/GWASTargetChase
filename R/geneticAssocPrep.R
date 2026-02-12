@@ -27,6 +27,6 @@ geneticAssocPrep <- function(assocOT, diseaseOT, humanGTF, ResultsPath = ".") {
   part2_ot <- inner_join(part1_ot, gencode_pc, by = c("targetId" = "gene_id"))
   disease_target_associations <- filter(part2_ot, datatypeId == "genetic_association")
   print("writing results")
-  write.table(disease_target_associations, paste0(ResultsPath, "disease_target_genetic_associations"), quote = F, row.names = F, sep = "\t", col.names = T)
+  write.table(disease_target_associations, file.path(ResultsPath, "disease_target_genetic_associations"), quote = F, row.names = F, sep = "\t", col.names = T)
   print("All done!!")
 }

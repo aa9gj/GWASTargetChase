@@ -23,7 +23,7 @@ The data from OpenTargets and IMPC can be prepared using functions within this p
 
 ### Prerequisites
 
-Install Bioconductor dependencies first:
+Requires R >= 3.5.0. Install Bioconductor dependencies first:
 
 ```r
 if (!require("BiocManager", quietly = TRUE))
@@ -97,7 +97,32 @@ gunzip gencode.v40.annotation.gtf.gz
 
 ## Quick Start
 
-### Step 1: Prepare the reference data
+### Option A: One-command download and prepare (recommended)
+
+The `downloadData()` function downloads and processes all required reference
+data from IMPC, OpenTargets Platform, and OpenTargets Genetics:
+
+```r
+library(GWASTargetChase)
+
+# Download and prepare all reference data (requires wget and internet)
+paths <- downloadData(destdir = "GWASTargetChase_data")
+
+# Run analysis using the downloaded data
+gwasFollowupMan(sumStats = "your_gwas_sumstats.txt",
+                felGTF = "Felis_catus.Felis_catus_9.0.106.gtf",
+                pval = 0.00005,
+                ResultsPath = "results",
+                impc = paths$impc,
+                assocOT = paths$assoc,
+                l2gOT = paths$l2g)
+```
+
+Note: The downloads are large (several GB). Requires `wget` on your system.
+
+### Option B: Manual step-by-step preparation
+
+#### Step 1: Prepare the reference data
 
 First, prepare the required reference datasets:
 
@@ -105,41 +130,41 @@ First, prepare the required reference datasets:
 library(GWASTargetChase)
 
 # 1. Prepare IMPC data
-# Download: ftp://ftp.ebi.ac.uk/pub/databases/impc/all-data-releases/release-16.0/results/phenotypeHitsPerGene.csv.gz
+# Download: ftp://ftp.ebi.ac.uk/pub/databases/impc/all-data-releases/latest/results/phenotypeHitsPerGene.csv.gz
 IMPCprep(impcData = "phenotypeHitsPerGene.csv",
-         ResultsPath = "prepared_data/")
+         ResultsPath = "prepared_data")
 
 # 2. Prepare OpenTargets locus2gene data
 # Download l2g and study-index from OpenTargets Genetics
 l2gPrep(l2gOT = "path/to/l2g/",
         studyOT = "path/to/study_index.json",
         humanGTF = "gencode.v40.annotation.gtf",
-        ResultsPath = "prepared_data/")
+        ResultsPath = "prepared_data")
 
 # 3. Prepare OpenTargets genetic association data
 # Download from OpenTargets Platform
 geneticAssocPrep(assocOT = "associationByDatasourceDirect.json",
                  diseaseOT = "diseases.json",
                  humanGTF = "gencode.v40.annotation.gtf",
-                 ResultsPath = "prepared_data/")
+                 ResultsPath = "prepared_data")
 ```
 
-### Step 2: Run the analysis
+#### Step 2: Run the analysis
 
 ```r
 # Use gwasFollowupMan with your prepared data
 gwasFollowupMan(sumStats = "your_gwas_sumstats.txt",
                 felGTF = "Felis_catus.Felis_catus_9.0.106.gtf",
                 pval = 0.00005,
-                ResultsPath = "results/",
-                impc = "prepared_data/impc_prepared.txt",
-                assocOT = "prepared_data/disease_target_genetic_associations.txt",
-                l2gOT = "prepared_data/l2g_annotated_full.txt")
+                ResultsPath = "results",
+                impc = "prepared_data/impcData",
+                assocOT = "prepared_data/disease_target_genetic_associations",
+                l2gOT = "prepared_data/l2g_annotated_full")
 ```
 
 ## Functions
 
-There are 7 exported functions within this package: `gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `IMPCprep`, `l2gPrep`, `geneticAssocPrep`, and `phenomePrep`
+There are 9 exported functions within this package: `downloadData`, `gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `gwasFollowuptest`, `IMPCprep`, `l2gPrep`, `geneticAssocPrep`, and `phenomePrep`
 
 ### Input Requirements
 
@@ -261,10 +286,13 @@ phenomePrep(phenome = "/path/to/fastenloc-torus-rcp.tsv",
 
 ## Output
 
-The `gwasFollowup` and `gwasFollowupMan` functions generate:
+All main functions (`gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `gwasFollowuptest`) generate:
 
 - **g2d_results.txt**: Gene-to-disease association scores from OpenTargets
 - **l2g_results.txt**: Full locus-to-gene results
+
+Additionally, `gwasFollowup` generates:
+
 - **l2g_filtered_results.txt**: Filtered results with key columns:
   1. `study_id`: GWAS study ID from GWAS Catalog
   2. `gene_id`: Ensembl gene ID

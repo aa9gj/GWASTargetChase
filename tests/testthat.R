@@ -1,5 +1,3 @@
-# Test configuration for GWASTargetChase package
-
 library(testthat)
 library(GWASTargetChase)
 

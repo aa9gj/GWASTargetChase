@@ -18,7 +18,7 @@ phenomePrep <- function(phenome, gtf, ResultsPath = ".") {
   gtf$gene_id <- gsub("\\..*", "", gtf$gene_id)
   phenome <- inner_join(phenome, gtf, by = "gene_id")
   phenome <- phenome[, -1]
-  write.table(phenome, paste0(ResultsPath, "phenomeXcan"), quote = F, row.names = F)
+  write.table(phenome, file.path(ResultsPath, "phenomeXcan"), quote = F, row.names = F)
 }
 
 
