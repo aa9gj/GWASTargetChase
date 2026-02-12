@@ -1,23 +1,15 @@
 # GWASTargetChase
 
-Prioritization of GWAS genes using OpenTargets, TWAS-hub and IMPC data.
+Gene prioritization for GWAS results using OpenTargets and IMPC data.
 
-## Purpose
+## Overview
 
-Complex diseases are disorders that result from multiple genetic variants and genes coupled with influences from the environment. One way to study complex disease is Genome-wide association studies (GWAS). GWAS is an approach to study cohorts (populations) and associate loci (genomic regions containing multiple variants and genes) to complex diseases. However, a main challenge to interpreting GWAS results is 90% of these loci are found within intronic or intergenic regions suggesting they are involved in gene regulation rather than affecting the gene sequence. Therefore, GWAS follow-up (i.e.using multi-omics data and approaches to pin point causal genes) has been used as a tool in human genetics to identify causal genes in complex diseases and therefore hone in on potential therapeutic and intervention targets.
+GWASTargetChase helps you identify and prioritize candidate genes from GWAS results by integrating:
 
-Research funding has been poured into generating resources of GWAS follow-up data in humans given the success this approach has shown in identifying gene targets. However, other species are lagging behind due to the lack of funding. Therefore, the idea to use humans as a model system for feline complex disease could potentially point to genes of interest to feline health. Thus, the purpose of this package is to prepare, and utilize data from human studies to follow up on feline and/or K9 GWAS summary statistics.
+- **OpenTargets Platform**: Gene-disease associations and genetic evidence scores
+- **IMPC** (International Mouse Phenotyping Consortium): Mouse knockout phenotypes
 
-## Data Curation
-
-The human GWAS follow-up data is obtained from the following sources:
-
-- [OpenTargets](https://www.opentargets.org/)
-- [IMPC](https://www.mousephenotype.org/)
-- [PhenomeXcan](http://apps.hakyimlab.org/phenomexcan/)
-- [Relevant WebTWAS traits](http://www.webtwas.net/#/diseases)
-
-The data from OpenTargets and IMPC can be prepared using functions within this package. The data from PhenomeXcan and WebTWAS can also be downloaded and prepared using the provided functions.
+Supports **human**, **mouse**, **cat**, and **dog** GWAS analysis with automatic GTF annotation download.
 
 ## Installation
 
@@ -35,354 +27,147 @@ BiocManager::install(c("GenomicRanges", "rtracklayer", "S4Vectors"))
 ### Install from GitHub
 
 ```r
-# Install remotes if not already installed
+# Install remotes if needed
 if (!require("remotes", quietly = TRUE))
   install.packages("remotes")
 
 # Install GWASTargetChase
 remotes::install_github("aa9gj/GWASTargetChase")
 
-# Load the package
-library(GWASTargetChase)
-```
-
-Alternatively, using devtools:
-
-```r
-devtools::install_github("aa9gj/GWASTargetChase")
-```
-
-## Sample Data
-
-The package includes sample data files for testing and understanding the expected input formats:
-
-```r
-# Get path to example GWAS summary statistics
-gwas_file <- system.file("extdata", "example_gwas_sumstats.tsv",
-                         package = "GWASTargetChase")
-
-# Get path to example GTF file (minimal example)
-gtf_file <- system.file("extdata", "example_cat_gtf.gtf",
-                        package = "GWASTargetChase")
-
-# Read the example data to see the format
-example_gwas <- data.table::fread(gwas_file)
-head(example_gwas)
-```
-
-## GTF Files
-
-Download the appropriate GTF files for your species. This package depends on Ensembl data structure for gene names and chromosome IDs.
-
-### Cat (Felis catus)
-
-```sh
-wget http://ftp.ensembl.org/pub/release-106/gtf/felis_catus/Felis_catus.Felis_catus_9.0.106.gtf.gz
-gunzip Felis_catus.Felis_catus_9.0.106.gtf.gz
-```
-
-### Dog (Canis lupus familiaris)
-
-```sh
-wget http://ftp.ensembl.org/pub/release-106/gtf/canis_lupus_familiaris/Canis_lupus_familiaris.ROS_Cfam_1.0.106.gtf.gz
-gunzip Canis_lupus_familiaris.ROS_Cfam_1.0.106.gtf.gz
-```
-
-### Human (for data preparation)
-
-```sh
-wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_40/gencode.v40.annotation.gtf.gz
-gunzip gencode.v40.annotation.gtf.gz
+# Install optional dependencies for API access
+install.packages(c("httr", "rappdirs", "R.utils"))
 ```
 
 ## Quick Start
 
-### Option A: One-command download and prepare (recommended)
-
-The `downloadData()` function downloads and processes all required reference
-data from IMPC, OpenTargets Platform, and OpenTargets Genetics:
+### One-command analysis
 
 ```r
 library(GWASTargetChase)
 
-# Download and prepare all reference data (requires wget and internet)
-paths <- downloadData(destdir = "GWASTargetChase_data")
+# Run prioritization analysis
+# GTF file is automatically downloaded and cached
+results <- run_prioritization_analysis(
+  sumStats = "my_gwas_results.txt",
+  species = "cat",      # Options: "human", "mouse", "cat", "dog"
+  pval = 5e-8,
+  output_dir = "results/"
+)
 
-# Run analysis using the downloaded data
-gwasFollowupMan(sumStats = "your_gwas_sumstats.txt",
-                felGTF = "Felis_catus.Felis_catus_9.0.106.gtf",
-                pval = 0.00005,
-                ResultsPath = "results",
-                impc = paths$impc,
-                assocOT = paths$assoc,
-                l2gOT = paths$l2g)
+# View prioritized genes
+head(results$gene_summary)
 ```
-
-Note: The downloads are large (several GB). Requires `wget` on your system.
-
-### Option B: Manual step-by-step preparation
-
-#### Step 1: Prepare the reference data
-
-First, prepare the required reference datasets:
-
-```r
-library(GWASTargetChase)
-
-# 1. Prepare IMPC data
-# Download: ftp://ftp.ebi.ac.uk/pub/databases/impc/all-data-releases/latest/results/phenotypeHitsPerGene.csv.gz
-IMPCprep(impcData = "phenotypeHitsPerGene.csv",
-         ResultsPath = "prepared_data")
-
-# 2. Prepare OpenTargets locus2gene data
-# Download l2g and study-index from OpenTargets Genetics
-l2gPrep(l2gOT = "path/to/l2g/",
-        studyOT = "path/to/study_index.json",
-        humanGTF = "gencode.v40.annotation.gtf",
-        ResultsPath = "prepared_data")
-
-# 3. Prepare OpenTargets genetic association data
-# Download from OpenTargets Platform
-geneticAssocPrep(assocOT = "associationByDatasourceDirect.json",
-                 diseaseOT = "diseases.json",
-                 humanGTF = "gencode.v40.annotation.gtf",
-                 ResultsPath = "prepared_data")
-```
-
-#### Step 2: Run the analysis
-
-```r
-# Use gwasFollowupMan with your prepared data
-gwasFollowupMan(sumStats = "your_gwas_sumstats.txt",
-                felGTF = "Felis_catus.Felis_catus_9.0.106.gtf",
-                pval = 0.00005,
-                ResultsPath = "results",
-                impc = "prepared_data/impcData",
-                assocOT = "prepared_data/disease_target_genetic_associations",
-                l2gOT = "prepared_data/l2g_annotated_full")
-```
-
-## Functions
-
-There are 9 exported functions within this package: `downloadData`, `gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `gwasFollowuptest`, `IMPCprep`, `l2gPrep`, `geneticAssocPrep`, and `phenomePrep`
 
 ### Input Requirements
 
-Your GWAS summary statistics file must have the following column names:
-- `p_wald`: Corrected p-values
-- `ps`: SNP position
-- `chr`: Chromosome
+Your GWAS summary statistics file must have these columns:
+- `chr`: Chromosome (e.g., "1", "X", or "chr1")
+- `ps`: SNP position (base pairs)
+- `p_wald`: P-value
 
-### gwasFollowup
+Example:
+```
+chr	rs	ps	p_wald	af	beta	se
+1	rs1421085	53786615	2.5e-12	0.42	0.35	0.05
+1	rs9939609	53800954	5.1e-11	0.41	0.32	0.05
+```
 
-Main function that uses pre-loaded internal data (if available).
+## What it does
+
+`run_prioritization_analysis()` performs these steps:
+
+1. **Downloads GTF** (if needed): Automatically fetches species-specific gene annotations from Ensembl and caches them locally
+2. **Reads GWAS data**: Filters for significant SNPs based on your p-value threshold
+3. **Identifies genes**: Finds protein-coding genes within 1Mb of significant loci
+4. **Fetches OpenTargets data**: Queries the API for gene-disease associations
+5. **Fetches IMPC data**: Queries the API for mouse knockout phenotypes
+6. **Outputs results**: Creates integrated result files
+
+## Output Files
+
+| File | Description |
+|------|-------------|
+| `gene_summary.txt` | Main results with all genes, disease associations, and IMPC phenotypes |
+| `gene_disease_associations.txt` | Full OpenTargets gene-disease data |
+| `impc_phenotypes.txt` | IMPC mouse knockout phenotype data |
+
+### gene_summary.txt columns
+
+- `gene_name`: Gene symbol
+- `MGI_Gene_id`: Mouse Gene ID (from IMPC)
+- `#phenotype_hits`: Number of mouse knockout phenotypes
+- `Phenotype_Hits`: List of observed phenotypes
+- `n_disease_associations`: Number of disease associations in OpenTargets
+- `top_diseases`: Top 3 associated diseases
+- `max_genetic_assoc_score`: Highest genetic association score
+- `genecards_url`: Link to GeneCards for more info
+
+## Additional Functions
+
+### Fetch data separately
 
 ```r
-gwasFollowup(sumStats = "/path/to/GWAS/Summary/stats",
-             felGTF = "/path/to/feline/or/k9/gtf/file",
-             pval = 0.00005,
-             ResultsPath = "/path/to/results/directory/")
-```
+# Get GTF file for a species (downloads if needed)
+gtf_path <- get_gtf("dog")
 
-### gwasFollowupMan
+# Fetch OpenTargets gene-disease associations
+assoc <- fetch_gene_disease_associations(
+  gene_names = c("FTO", "MC4R", "BRCA1")
+)
 
-Manual version that uses your own prepared data files. **Recommended for most users.**
+# Fetch IMPC mouse phenotypes
+impc <- fetch_impc_data(
+  gene_names = c("FTO", "MC4R", "BRCA1")
+)
 
-```r
-gwasFollowupMan(sumStats = "/path/to/sumstats",
-                felGTF = "/path/to/Felis_catus.Felis_catus_9.0.106.gtf",
-                pval = 0.00005,
-                ResultsPath = "/path/to/results/",
-                impc = "/path/to/impc/results",
-                assocOT = "/path/to/disease_target_genetic_associations",
-                l2gOT = "/path/to/l2g_annotated_full")
-```
-
-### gwasFollowupFull
-
-Extended version with support for PhenomeXcan and TWAS data.
-
-```r
-gwasFollowupFull(sumStats = "/path/to/GWAS/summary/stats",
-                 felGTF = "/path/to/feline/or/k9/gtf/file",
-                 pval = 0.00000005,
-                 ResultsPath = "/path/to/results/directory/",
-                 phenomePath = "/path/to/PhenomeXcan/data",
-                 twasPath = "/path/to/twas/data")
-```
-
-### Data Preparation Functions
-
-#### IMPCprep
-
-Prepares IMPC (International Mouse Phenotyping Consortium) data.
-
-```sh
-# Download the data first
-wget ftp://ftp.ebi.ac.uk/pub/databases/impc/all-data-releases/release-16.0/results/phenotypeHitsPerGene.csv.gz
-gunzip phenotypeHitsPerGene.csv.gz
-```
-
-```r
-IMPCprep(impcData = "/path/to/phenotypeHitsPerGene.csv",
-         ResultsPath = "/path/to/results/")
-```
-
-#### l2gPrep
-
-Prepares OpenTargets locus2gene data.
-
-```sh
-# Download the data first
-wget ftp://ftp.ebi.ac.uk/pub/databases/opentargets/genetics/latest/l2g/*
-wget ftp://ftp.ebi.ac.uk/pub/databases/opentargets/genetics/latest/lut/study-index/*
-cat *.json > study_index.json
-```
-
-```r
-l2gPrep(l2gOT = "/path/to/l2g/dir/",
-        studyOT = "/path/to/study_index.json",
-        humanGTF = "/path/to/gencode.v40.annotation.gtf",
-        ResultsPath = "/path/to/results/")
-```
-
-#### geneticAssocPrep
-
-Prepares OpenTargets genetic association data.
-
-```sh
-# Download the data first
-wget --recursive --no-parent --no-host-directories --cut-dirs 8 \
-  ftp://ftp.ebi.ac.uk/pub/databases/opentargets/platform/22.06/output/etl/json/associationByDatasourceDirect
-cat *.json > associationByDatasourceDirect.json
-
-wget --recursive --no-parent --no-host-directories --cut-dirs 8 \
-  ftp://ftp.ebi.ac.uk/pub/databases/opentargets/platform/22.06/output/etl/json/diseases
-cat *.json > diseases.json
-```
-
-```r
-geneticAssocPrep(assocOT = "/path/to/associationByDatasourceDirect.json",
-                 diseaseOT = "/path/to/diseases.json",
-                 humanGTF = "/path/to/gencode.v40.annotation.gtf",
-                 ResultsPath = "/path/to/results/")
-```
-
-#### phenomePrep
-
-Prepares PhenomeXcan data.
-
-```sh
-# Download the data first
-wget https://zenodo.org/record/3911190/files/fastenloc-torus-rcp.tsv.gz
-gunzip fastenloc-torus-rcp.tsv.gz
-```
-
-```r
-phenomePrep(phenome = "/path/to/fastenloc-torus-rcp.tsv",
-            gtf = "/path/to/human/gtf/file",
-            ResultsPath = "/path/to/results/")
-```
-
-## Output
-
-All main functions (`gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `gwasFollowuptest`) generate:
-
-- **g2d_results.txt**: Gene-to-disease association scores from OpenTargets
-- **l2g_results.txt**: Full locus-to-gene results
-
-Additionally, `gwasFollowup` generates:
-
-- **l2g_filtered_results.txt**: Filtered results with key columns:
-  1. `study_id`: GWAS study ID from GWAS Catalog
-  2. `gene_id`: Ensembl gene ID
-  3. `full_l2g_score`: L2G model probability score
-  4. `y_proba_logi_*`: Component scores (distance, interaction, molecularQTL, pathogenicity)
-  5. `trait_reported`: GWAS trait annotation
-  6. `trait_category`: Type of trait
-  7. `gene_name`: Gene symbol
-  8. `IMPC_results`: Mouse knockout phenotypes
-  9. `rs` and following: SNP information from input GWAS
-- **plots.pdf**: LocusZoom-style plots for significant loci
-
-## OpenTargets API Integration
-
-The package includes functions to fetch data directly from the OpenTargets GraphQL API, eliminating the need for manual file downloads.
-
-### Check API Connection
-
-```r
-# Verify connectivity to OpenTargets
+# Check OpenTargets API connection
 check_opentargets_connection()
 ```
 
-### Fetch Gene-Disease Associations
-
-```r
-# Fetch associations for specific genes
-assoc <- fetch_gene_disease_associations(
-  gene_names = c("FTO", "MC4R", "TCF7L2", "PPARG"),
-  verbose = TRUE
-)
-head(assoc)
-```
-
-### Fetch L2G Scores
-
-```r
-# Fetch Locus-to-Gene scores for specific GWAS studies
-l2g <- fetch_l2g_scores(
-  study_ids = c("GCST004773", "GCST002783"),
-  min_l2g_score = 0.5
-)
-head(l2g)
-```
-
-### Prepare All Data at Once
-
-```r
-# Convenience function to prepare all required data
-files <- prepare_opentargets_data(
-  gene_names = c("FTO", "MC4R", "LEP", "LEPR", "PCSK9"),
-  output_dir = "prepared_data/"
-)
-```
-
-**Note:** API access requires the `httr` package. Install it with:
-```r
-install.packages("httr")
-```
-
-## Input Validation
-
-The package includes comprehensive input validation to catch errors early:
+### Input validation
 
 ```r
 # Validate GWAS file format
-validate_gwas_input("my_gwas_sumstats.tsv")
+validate_gwas_input("my_gwas.txt")
 
-# Check for significant SNPs before running analysis
-check_significant_snps("my_gwas_sumstats.tsv", pval = 5e-8)
+# Check for significant SNPs
+check_significant_snps("my_gwas.txt", pval = 5e-8)
 
-# Validate all inputs at once
-validate_gwas_followup_inputs(
-  sumStats = "my_gwas_sumstats.tsv",
-  felGTF = "Felis_catus.gtf",
-  pval = 5e-8,
-  ResultsPath = "results/"
-)
+# Validate GTF file
+validate_gtf_file("my_annotation.gtf")
 ```
 
-## Testing
+## Supported Species
 
-Run the package tests:
+| Species | GTF Source |
+|---------|------------|
+| Human | Ensembl GRCh38.110 |
+| Mouse | Ensembl GRCm39.110 |
+| Cat | Ensembl Felis_catus_9.0.110 |
+| Dog | Ensembl ROS_Cfam_1.0.110 |
+
+GTF files are automatically downloaded on first use and cached in `~/.cache/GWASTargetChase/gtf/`.
+
+## Example with sample data
 
 ```r
-# Install testthat if needed
-install.packages("testthat")
+library(GWASTargetChase)
 
-# Run tests
-testthat::test_package("GWASTargetChase")
+# Use included sample data
+gwas_file <- system.file("extdata", "example_gwas_sumstats.tsv",
+                         package = "GWASTargetChase")
+
+# Run with sample data
+results <- run_prioritization_analysis(
+  sumStats = gwas_file,
+  species = "cat",
+  pval = 1e-6,
+  output_dir = tempdir()
+)
+
+# Explore results
+print(results$genes)
+View(results$gene_summary)
 ```
 
 ## License

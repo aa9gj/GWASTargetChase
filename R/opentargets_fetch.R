@@ -493,3 +493,425 @@ check_opentargets_connection <- function() {
     return(invisible(FALSE))
   })
 }
+
+#' Fetch IMPC phenotype data for genes
+#'
+#' Retrieves mouse phenotype data from the International Mouse Phenotyping
+#' Consortium (IMPC) for specified genes.
+#'
+#' @param gene_names Character vector of gene symbols (e.g., "FTO", "MC4R")
+#' @param verbose Print progress messages (default: TRUE)
+#' @return A data.frame with IMPC phenotype data
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' impc <- fetch_impc_data(gene_names = c("FTO", "MC4R", "BRCA1"))
+#' }
+fetch_impc_data <- function(gene_names, verbose = TRUE) {
+
+  if (!requireNamespace("httr", quietly = TRUE)) {
+    stop("Package 'httr' is required for API requests. ",
+         "Install it with: install.packages('httr')", call. = FALSE)
+  }
+
+  if (!requireNamespace("jsonlite", quietly = TRUE)) {
+    stop("Package 'jsonlite' is required for API requests.", call. = FALSE)
+  }
+
+  results <- list()
+
+  for (gene in gene_names) {
+    if (verbose) message("Fetching IMPC data for: ", gene)
+
+    # IMPC API endpoint for gene phenotypes
+    url <- paste0("https://www.ebi.ac.uk/mi/impc/solr/genotype-phenotype/select?",
+                  "q=marker_symbol:", gene,
+                  "&rows=1000&wt=json")
+
+    tryCatch({
+      response <- httr::GET(url, httr::timeout(30))
+
+      if (httr::status_code(response) == 200) {
+        content <- httr::content(response, as = "text", encoding = "UTF-8")
+        parsed <- jsonlite::fromJSON(content, simplifyVector = FALSE)
+
+        docs <- parsed$response$docs
+
+        if (length(docs) > 0) {
+          # Extract phenotype information
+          phenotypes <- sapply(docs, function(d) {
+            d$mp_term_name %||% NA
+          })
+          phenotypes <- unique(phenotypes[!is.na(phenotypes)])
+
+          if (length(phenotypes) > 0) {
+            results[[length(results) + 1]] <- data.frame(
+              gene_name = toupper(gene),
+              MGI_Gene_id = docs[[1]]$marker_accession_id %||% NA,
+              `#phenotype_hits` = length(phenotypes),
+              Phenotype_Hits = paste(phenotypes, collapse = "; "),
+              stringsAsFactors = FALSE,
+              check.names = FALSE
+            )
+          }
+        }
+      }
+    }, error = function(e) {
+      if (verbose) warning("Error fetching IMPC data for ", gene, ": ", e$message,
+                           call. = FALSE)
+    })
+
+    Sys.sleep(0.2)  # Rate limiting
+  }
+
+  if (length(results) > 0) {
+    combined <- do.call(rbind, results)
+    if (verbose) {
+      message(sprintf("Retrieved IMPC data for %d genes.", nrow(combined)))
+    }
+    return(combined)
+  } else {
+    if (verbose) message("No IMPC data found for the specified genes.")
+    return(data.frame(
+      gene_name = character(),
+      MGI_Gene_id = character(),
+      `#phenotype_hits` = integer(),
+      Phenotype_Hits = character(),
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    ))
+  }
+}
+
+#' Get GTF file for a species
+#'
+#' Downloads and caches GTF annotation files from Ensembl for supported species.
+#' Files are cached in a package-specific directory to avoid re-downloading.
+#'
+#' @param species Species name: "human", "mouse", "cat", or "dog"
+#' @param cache_dir Directory to store cached GTF files (default: user cache directory)
+#' @param verbose Print progress messages (default: TRUE)
+#' @return Path to the GTF file
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' gtf_path <- get_gtf("cat")
+#' gtf_path <- get_gtf("dog")
+#' }
+get_gtf <- function(species = c("human", "mouse", "cat", "dog"),
+                    cache_dir = NULL,
+                    verbose = TRUE) {
+
+  species <- match.arg(species)
+
+
+  # Define GTF URLs and filenames for each species
+  gtf_info <- list(
+    human = list(
+      url = "https://ftp.ensembl.org/pub/release-110/gtf/homo_sapiens/Homo_sapiens.GRCh38.110.gtf.gz",
+      filename = "Homo_sapiens.GRCh38.110.gtf"
+    ),
+    mouse = list(
+      url = "https://ftp.ensembl.org/pub/release-110/gtf/mus_musculus/Mus_musculus.GRCm39.110.gtf.gz",
+      filename = "Mus_musculus.GRCm39.110.gtf"
+    ),
+    cat = list(
+      url = "https://ftp.ensembl.org/pub/release-110/gtf/felis_catus/Felis_catus.Felis_catus_9.0.110.gtf.gz",
+      filename = "Felis_catus.Felis_catus_9.0.110.gtf"
+    ),
+    dog = list(
+      url = "https://ftp.ensembl.org/pub/release-110/gtf/canis_lupus_familiaris/Canis_lupus_familiaris.ROS_Cfam_1.0.110.gtf.gz",
+      filename = "Canis_lupus_familiaris.ROS_Cfam_1.0.110.gtf"
+    )
+  )
+
+  # Set up cache directory
+  if (is.null(cache_dir)) {
+    cache_dir <- file.path(rappdirs::user_cache_dir("GWASTargetChase"), "gtf")
+  }
+
+  if (!dir.exists(cache_dir)) {
+    dir.create(cache_dir, recursive = TRUE)
+  }
+
+  info <- gtf_info[[species]]
+  gtf_path <- file.path(cache_dir, info$filename)
+  gz_path <- paste0(gtf_path, ".gz")
+
+  # Check if already downloaded
+
+  if (file.exists(gtf_path)) {
+    if (verbose) message("Using cached GTF file for ", species, ": ", gtf_path)
+    return(gtf_path)
+  }
+
+  # Download if not cached
+  if (verbose) message("Downloading GTF file for ", species, "...")
+  if (verbose) message("  URL: ", info$url)
+  if (verbose) message("  This may take a few minutes...")
+
+  tryCatch({
+    utils::download.file(info$url, gz_path, mode = "wb", quiet = !verbose)
+
+    # Decompress
+    if (verbose) message("Decompressing GTF file...")
+    R.utils::gunzip(gz_path, destname = gtf_path, remove = TRUE)
+
+    if (verbose) message("GTF file saved to: ", gtf_path)
+    return(gtf_path)
+
+  }, error = function(e) {
+    # Clean up partial downloads
+    if (file.exists(gz_path)) unlink(gz_path)
+    if (file.exists(gtf_path)) unlink(gtf_path)
+    stop("Failed to download GTF file: ", e$message, call. = FALSE)
+  })
+}
+
+#' Run gene prioritization analysis
+#'
+#' Main function to run a complete GWAS gene prioritization analysis using
+#' OpenTargets and IMPC data. Automatically downloads species-specific GTF
+#' annotation files and caches them for future use.
+#'
+#' @param sumStats Path to GWAS summary statistics file (requires chr, ps, p_wald columns)
+#' @param species Species for GTF annotation: "human", "mouse", "cat", or "dog"
+#' @param pval P-value threshold for significance (default: 5e-8)
+#' @param output_dir Directory to save results (default: current directory)
+#' @param window_size Window size around significant SNPs in bp (default: 1000000 = 1Mb)
+#' @param verbose Print progress messages (default: TRUE)
+#' @return List with genes, summary data, and paths to output files
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Run analysis for cat GWAS
+#' results <- run_prioritization_analysis(
+#'   sumStats = "my_cat_gwas.txt",
+#'   species = "cat",
+#'   pval = 1e-6,
+#'   output_dir = "results/"
+#' )
+#'
+#' # Run analysis for dog GWAS
+#' results <- run_prioritization_analysis(
+#'   sumStats = "my_dog_gwas.txt",
+#'   species = "dog",
+#'   pval = 5e-8
+#' )
+#'
+#' # View main results
+#' head(results$gene_summary)
+#' }
+run_prioritization_analysis <- function(sumStats,
+                                         species = c("human", "mouse", "cat", "dog"),
+                                         pval = 5e-8,
+                                         output_dir = ".",
+                                         window_size = 1000000,
+                                         verbose = TRUE) {
+
+  species <- match.arg(species)
+
+  if (!requireNamespace("data.table", quietly = TRUE)) {
+    stop("Package 'data.table' is required.", call. = FALSE)
+  }
+  if (!requireNamespace("GenomicRanges", quietly = TRUE)) {
+    stop("Package 'GenomicRanges' is required.", call. = FALSE)
+  }
+  if (!requireNamespace("rtracklayer", quietly = TRUE)) {
+    stop("Package 'rtracklayer' is required.", call. = FALSE)
+  }
+  if (!requireNamespace("rappdirs", quietly = TRUE)) {
+    stop("Package 'rappdirs' is required. Install with: install.packages('rappdirs')",
+         call. = FALSE)
+  }
+  if (!requireNamespace("R.utils", quietly = TRUE)) {
+    stop("Package 'R.utils' is required. Install with: install.packages('R.utils')",
+         call. = FALSE)
+  }
+
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+
+  if (verbose) message("=== GWASTargetChase Gene Prioritization ===\n")
+  if (verbose) message("Species: ", species, "\n")
+
+  # Step 1: Get GTF file (download if needed)
+  if (verbose) message("[1/6] Getting GTF annotation file...")
+  gtf_file <- get_gtf(species = species, verbose = verbose)
+
+  # Step 2: Read and filter GWAS data
+  if (verbose) message("\n[2/6] Reading GWAS summary statistics...")
+  gwas <- data.table::fread(sumStats)
+
+  # Validate required columns
+  required_cols <- c("chr", "ps", "p_wald")
+  missing_cols <- setdiff(required_cols, names(gwas))
+  if (length(missing_cols) > 0) {
+    stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
+  }
+
+  # Normalize chromosome names
+  gwas$chr <- gsub("^chr", "", gwas$chr, ignore.case = TRUE)
+  gwas$chr <- gsub("^20$", "X", gwas$chr)
+
+  # Filter for significant SNPs
+  sig_gwas <- gwas[gwas$p_wald <= pval, ]
+
+  if (nrow(sig_gwas) == 0) {
+    stop("No significant SNPs found with p-value <= ", pval,
+         ". Consider increasing the threshold.")
+  }
+
+  if (verbose) message("  Found ", nrow(sig_gwas), " significant SNPs")
+
+  # Step 3: Read GTF and identify genes
+  if (verbose) message("\n[3/6] Identifying genes near significant loci...")
+  gtf_data <- as.data.frame(rtracklayer::import(gtf_file))
+  pc_gene_gtf <- gtf_data[gtf_data$gene_biotype == "protein_coding" &
+                            gtf_data$type == "gene", ]
+
+  if (nrow(pc_gene_gtf) == 0) {
+    stop("No protein-coding genes found in GTF file.")
+  }
+
+  # Create genomic ranges
+  sig_gwas$start <- sig_gwas$ps - window_size
+  sig_gwas$start[sig_gwas$start < 1] <- 1
+  sig_gwas$end <- sig_gwas$ps + window_size
+
+  sig_gwas_ranges <- GenomicRanges::makeGRangesFromDataFrame(
+    sig_gwas, keep.extra.columns = TRUE, seqnames.field = "chr"
+  )
+  pc_gene_ranges <- GenomicRanges::makeGRangesFromDataFrame(
+    pc_gene_gtf, keep.extra.columns = TRUE
+  )
+
+  # Find overlapping genes
+  hits <- GenomicRanges::findOverlaps(pc_gene_ranges, sig_gwas_ranges)
+  olap <- GenomicRanges::pintersect(
+    pc_gene_ranges[S4Vectors::queryHits(hits)],
+    sig_gwas_ranges[S4Vectors::subjectHits(hits)]
+  )
+
+  genes <- unique(as.vector(stats::na.exclude(olap$gene_name)))
+
+  if (length(genes) == 0) {
+    stop("No genes found overlapping significant loci.")
+  }
+
+  if (verbose) message("  Found ", length(genes), " genes: ",
+                       paste(head(genes, 5), collapse = ", "),
+                       if(length(genes) > 5) "..." else "")
+
+  # Step 4: Fetch OpenTargets gene-disease associations
+  if (verbose) message("\n[4/6] Fetching OpenTargets gene-disease associations...")
+  gene_disease <- tryCatch({
+    fetch_gene_disease_associations(gene_names = genes, verbose = FALSE)
+  }, error = function(e) {
+    warning("Could not fetch gene-disease associations: ", e$message)
+    data.frame()
+  })
+
+  if (verbose && nrow(gene_disease) > 0) {
+    message("  Retrieved ", nrow(gene_disease), " associations")
+  }
+
+  # Step 5: Fetch IMPC phenotype data
+  if (verbose) message("\n[5/6] Fetching IMPC mouse phenotype data...")
+  impc_data <- tryCatch({
+    fetch_impc_data(gene_names = genes, verbose = FALSE)
+  }, error = function(e) {
+    warning("Could not fetch IMPC data: ", e$message)
+    data.frame()
+  })
+
+  if (verbose && nrow(impc_data) > 0) {
+    message("  Retrieved data for ", nrow(impc_data), " genes")
+  }
+
+  # Step 6: Combine results
+  if (verbose) message("\n[6/6] Combining results and writing output files...")
+
+  # Create gene summary table
+  gene_summary <- data.frame(gene_name = genes, stringsAsFactors = FALSE)
+
+  # Add IMPC data
+  if (nrow(impc_data) > 0) {
+    gene_summary <- merge(gene_summary, impc_data, by = "gene_name", all.x = TRUE)
+  }
+
+  # Count disease associations per gene
+  if (nrow(gene_disease) > 0) {
+    disease_counts <- as.data.frame(table(gene_disease$gene_name))
+    names(disease_counts) <- c("gene_name", "n_disease_associations")
+    gene_summary <- merge(gene_summary, disease_counts, by = "gene_name", all.x = TRUE)
+
+    # Get top diseases per gene
+    top_diseases <- aggregate(disease_name ~ gene_name, data = gene_disease,
+                               FUN = function(x) paste(head(x, 3), collapse = "; "))
+    names(top_diseases)[2] <- "top_diseases"
+    gene_summary <- merge(gene_summary, top_diseases, by = "gene_name", all.x = TRUE)
+
+    # Add max genetic association score
+    if ("genetic_association_score" %in% names(gene_disease)) {
+      score_summary <- aggregate(genetic_association_score ~ gene_name, data = gene_disease,
+                                  FUN = max, na.rm = TRUE)
+      names(score_summary)[2] <- "max_genetic_assoc_score"
+      gene_summary <- merge(gene_summary, score_summary, by = "gene_name", all.x = TRUE)
+    }
+  }
+
+  # Add GeneCards links
+  gene_summary$genecards_url <- paste0(
+    "https://www.genecards.org/Search/Keyword?queryString=",
+    gene_summary$gene_name
+  )
+
+  # Write output files
+  summary_file <- file.path(output_dir, "gene_summary.txt")
+  write.table(gene_summary, summary_file, sep = "\t", quote = FALSE, row.names = FALSE)
+
+  if (nrow(gene_disease) > 0) {
+    g2d_file <- file.path(output_dir, "gene_disease_associations.txt")
+    # Add IMPC to full results
+    if (nrow(impc_data) > 0) {
+      gene_disease <- merge(gene_disease, impc_data, by = "gene_name", all.x = TRUE)
+    }
+    write.table(gene_disease, g2d_file, sep = "\t", quote = FALSE, row.names = FALSE)
+  }
+
+  if (nrow(impc_data) > 0) {
+    impc_file <- file.path(output_dir, "impc_phenotypes.txt")
+    write.table(impc_data, impc_file, sep = "\t", quote = FALSE, row.names = FALSE)
+  }
+
+  # Print summary
+  if (verbose) {
+    message("\n=== Analysis Complete ===")
+    message("\nSummary:")
+    message("  - Species: ", species)
+    message("  - Significant SNPs: ", nrow(sig_gwas))
+    message("  - Genes identified: ", length(genes))
+    message("  - Genes with disease associations: ",
+            sum(!is.na(gene_summary$n_disease_associations)))
+    message("  - Genes with IMPC phenotypes: ",
+            sum(!is.na(gene_summary$`#phenotype_hits`)))
+    message("\nOutput files saved to: ", normalizePath(output_dir))
+    message("  - gene_summary.txt (main results)")
+    if (nrow(gene_disease) > 0) message("  - gene_disease_associations.txt")
+    if (nrow(impc_data) > 0) message("  - impc_phenotypes.txt")
+  }
+
+  return(invisible(list(
+    species = species,
+    genes = genes,
+    gene_summary = gene_summary,
+    gene_disease = gene_disease,
+    impc_data = impc_data,
+    output_dir = output_dir
+  )))
+}
