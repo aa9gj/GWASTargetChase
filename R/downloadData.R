@@ -338,23 +338,77 @@ downloadData <- function(destdir = "GWASTargetChase_data",
   wget_available <- Sys.which("wget") != ""
   curl_available <- Sys.which("curl") != ""
 
+  success <- FALSE
+
   if (wget_available) {
     cat("  Using wget for recursive download...\n")
-    cmd <- paste0("wget -r -np -nH --cut-dirs=8 -P '", dest_dir, "' '", base_url, "' 2>&1")
-    result <- system(cmd, intern = TRUE)
-    if (!is.null(attr(result, "status")) && attr(result, "status") != 0) {
-      cat("  wget failed. Trying alternative method...\n")
+    # Calculate cut-dirs based on URL structure
+    url_parts <- strsplit(gsub("^https?://", "", base_url), "/")[[1]]
+    cut_dirs <- length(url_parts) - 1
+
+    # Use -A to accept specific file types
+    cmd <- paste0(
+      "wget -r -np -nH --cut-dirs=", cut_dirs,
+      " -A '*.json,*.parquet,part-*' ",
+      "-P '", dest_dir, "' '", base_url, "' 2>&1"
+    )
+    result <- system(cmd, intern = TRUE, ignore.stderr = TRUE)
+    exit_status <- attr(result, "status")
+
+    # Check if files were downloaded
+    downloaded_files <- list.files(dest_dir, pattern = "\\.(json|parquet)$|^part-",
+                                   recursive = TRUE, full.names = TRUE)
+    if (length(downloaded_files) > 0) {
+      success <- TRUE
+      cat("  Downloaded ", length(downloaded_files), " files.\n")
     }
-  } else if (curl_available) {
-    cat("  wget not found. Trying curl...\n")
-    # curl can't do recursive FTP easily; try to list and download
-    cat("  NOTE: curl cannot do recursive FTP downloads.\n")
-    cat("  Please install wget or download manually from:\n")
-    cat("    ", base_url, "\n")
-    cat("  Save files to: ", dest_dir, "\n")
-    return(invisible(NULL))
-  } else {
-    cat("  Neither wget nor curl found.\n")
+
+    # If that didn't work, try without cut-dirs
+    if (!success) {
+      cat("  Retrying with different wget options...\n")
+      cmd <- paste0(
+        "wget -r -np -l 1 -A '*.json,*.parquet,part-*' ",
+        "-P '", dest_dir, "' '", base_url, "' 2>&1"
+      )
+      system(cmd, intern = TRUE, ignore.stderr = TRUE)
+      downloaded_files <- list.files(dest_dir, pattern = "\\.(json|parquet)$|^part-",
+                                     recursive = TRUE, full.names = TRUE)
+      if (length(downloaded_files) > 0) {
+        success <- TRUE
+        cat("  Downloaded ", length(downloaded_files), " files.\n")
+      }
+    }
+  }
+
+  if (!success && curl_available) {
+    cat("  wget failed. Trying curl to list files...\n")
+    # Try to get directory listing and download individual files
+    tryCatch({
+      listing <- system(paste0("curl -s '", base_url, "'"), intern = TRUE)
+      # Parse links from HTML
+      links <- regmatches(listing, gregexpr('href="[^"]+\\.(json|parquet)"', listing))
+      links <- unlist(links)
+      if (length(links) > 0) {
+        links <- gsub('href="|"$', '', links)
+        cat("  Found ", length(links), " files to download.\n")
+        for (link in links) {
+          if (!grepl("^http", link)) {
+            link <- paste0(base_url, link)
+          }
+          fname <- basename(link)
+          dest_file <- file.path(dest_dir, fname)
+          cat("    Downloading: ", fname, "\n")
+          download.file(link, dest_file, mode = "wb", quiet = TRUE)
+        }
+        success <- TRUE
+      }
+    }, error = function(e) {
+      cat("  curl method failed: ", conditionMessage(e), "\n")
+    })
+  }
+
+  if (!success) {
+    cat("  Automatic download failed.\n")
     cat("  Please download manually from:\n")
     cat("    ", base_url, "\n")
     cat("  Save files to: ", dest_dir, "\n")
@@ -362,27 +416,28 @@ downloadData <- function(destdir = "GWASTargetChase_data",
   }
 
   # Concatenate JSON parts if requested
-  if (!is.null(output_combined)) {
-    json_files <- list.files(dest_dir, pattern = "\\.(json|parquet)$", full.names = TRUE)
-    if (length(json_files) > 0 && grepl("\\.json$", output_combined)) {
-      cat("  Concatenating ", length(json_files), " part files...\n")
+  if (!is.null(output_combined) && grepl("\\.json$", output_combined)) {
+    # Find all JSON files
+    json_files <- list.files(dest_dir, pattern = "\\.json$",
+                             full.names = TRUE, recursive = TRUE)
+
+    if (length(json_files) > 0) {
+      cat("  Concatenating ", length(json_files), " JSON files...\n")
       # Use system cat for efficiency with large files
-      cmd <- paste0("cat '", paste(json_files, collapse = "' '"), "' > '", output_combined, "'")
+      # Escape single quotes in filenames
+      safe_files <- gsub("'", "'\\''", json_files)
+      cmd <- paste0("cat '", paste(safe_files, collapse = "' '"), "' > '", output_combined, "'")
       system(cmd)
-      cat("  Combined file: ", output_combined, "\n")
-    } else if (length(json_files) == 0) {
-      # Check subdirectories (wget sometimes creates nested dirs)
-      all_files <- list.files(dest_dir, pattern = "\\.(json|parquet)$",
-                              full.names = TRUE, recursive = TRUE)
-      if (length(all_files) > 0 && grepl("\\.json$", output_combined)) {
-        cat("  Found ", length(all_files), " files in subdirectories, concatenating...\n")
-        cmd <- paste0("cat '", paste(all_files, collapse = "' '"), "' > '", output_combined, "'")
-        system(cmd)
-        cat("  Combined file: ", output_combined, "\n")
+
+      if (file.exists(output_combined) && file.size(output_combined) > 0) {
+        cat("  Combined file: ", output_combined,
+            " (", format(file.size(output_combined), big.mark = ","), " bytes)\n")
       } else {
-        cat("  WARNING: No part files found in ", dest_dir, "\n")
-        cat("  You may need to download manually from: ", base_url, "\n")
+        cat("  WARNING: Combined file is empty or was not created.\n")
       }
+    } else {
+      cat("  WARNING: No JSON part files found in ", dest_dir, "\n")
+      cat("  You may need to download manually from: ", base_url, "\n")
     }
   }
 
