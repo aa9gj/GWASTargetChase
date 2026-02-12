@@ -149,7 +149,7 @@ expect_error(
   # Negative p-value should be invalid
   expect_error(
     validate_pvalue_threshold(-0.05),
-    regexp = "p-value|positive|negative"
+    regexp = "P-value|greater than 0"
   )
 })
 
