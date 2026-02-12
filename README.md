@@ -277,6 +277,86 @@ The `gwasFollowup` and `gwasFollowupMan` functions generate:
   9. `rs` and following: SNP information from input GWAS
 - **plots.pdf**: LocusZoom-style plots for significant loci
 
+## OpenTargets API Integration
+
+The package includes functions to fetch data directly from the OpenTargets GraphQL API, eliminating the need for manual file downloads.
+
+### Check API Connection
+
+```r
+# Verify connectivity to OpenTargets
+check_opentargets_connection()
+```
+
+### Fetch Gene-Disease Associations
+
+```r
+# Fetch associations for specific genes
+assoc <- fetch_gene_disease_associations(
+  gene_names = c("FTO", "MC4R", "TCF7L2", "PPARG"),
+  verbose = TRUE
+)
+head(assoc)
+```
+
+### Fetch L2G Scores
+
+```r
+# Fetch Locus-to-Gene scores for specific GWAS studies
+l2g <- fetch_l2g_scores(
+  study_ids = c("GCST004773", "GCST002783"),
+  min_l2g_score = 0.5
+)
+head(l2g)
+```
+
+### Prepare All Data at Once
+
+```r
+# Convenience function to prepare all required data
+files <- prepare_opentargets_data(
+  gene_names = c("FTO", "MC4R", "LEP", "LEPR", "PCSK9"),
+  output_dir = "prepared_data/"
+)
+```
+
+**Note:** API access requires the `httr` package. Install it with:
+```r
+install.packages("httr")
+```
+
+## Input Validation
+
+The package includes comprehensive input validation to catch errors early:
+
+```r
+# Validate GWAS file format
+validate_gwas_input("my_gwas_sumstats.tsv")
+
+# Check for significant SNPs before running analysis
+check_significant_snps("my_gwas_sumstats.tsv", pval = 5e-8)
+
+# Validate all inputs at once
+validate_gwas_followup_inputs(
+  sumStats = "my_gwas_sumstats.tsv",
+  felGTF = "Felis_catus.gtf",
+  pval = 5e-8,
+  ResultsPath = "results/"
+)
+```
+
+## Testing
+
+Run the package tests:
+
+```r
+# Install testthat if needed
+install.packages("testthat")
+
+# Run tests
+testthat::test_package("GWASTargetChase")
+```
+
 ## License
 
 MIT License
