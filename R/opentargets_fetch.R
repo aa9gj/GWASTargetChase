@@ -190,103 +190,136 @@ fetch_associations_batch <- function(gene_ids, api_url) {
   }
 }
 
-#' Fetch L2G scores from OpenTargets Genetics
+#' Fetch L2G scores from OpenTargets Platform
 #'
-#' Retrieves Locus-to-Gene (L2G) scores for specified study IDs or variants.
+#' Retrieves Locus-to-Gene (L2G) scores for specified gene IDs. The L2G model
+#' prioritizes likely causal genes at GWAS loci.
 #'
-#' @param study_ids Character vector of GWAS study IDs (e.g., "GCST004773")
-#' @param variant_ids Character vector of variant IDs (e.g., "16_53786615_C_T")
+#' @param gene_ids Character vector of Ensembl gene IDs (e.g., "ENSG00000140718")
+#' @param gene_names Character vector of gene symbols (e.g., "FTO"). Used if gene_ids is NULL.
 #' @param min_l2g_score Minimum L2G score to return (default: 0.5)
 #' @param verbose Print progress messages (default: TRUE)
-#' @return A data.frame with L2G scores
+#' @return A data.frame with L2G scores and study information
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Fetch L2G scores for a GWAS study
-#' l2g <- fetch_l2g_scores(study_ids = "GCST004773")
+#' # Fetch L2G scores for specific genes
+#' l2g <- fetch_l2g_scores(gene_names = c("FTO", "MC4R"))
 #' }
-fetch_l2g_scores <- function(study_ids = NULL,
-                              variant_ids = NULL,
+fetch_l2g_scores <- function(gene_ids = NULL,
+                              gene_names = NULL,
                               min_l2g_score = 0.5,
                               verbose = TRUE) {
 
-  if (is.null(study_ids) && is.null(variant_ids)) {
-    stop("Either study_ids or variant_ids must be provided.", call. = FALSE)
+  if (is.null(gene_ids) && is.null(gene_names)) {
+    stop("Either gene_ids or gene_names must be provided.", call. = FALSE)
   }
 
-  # OpenTargets Genetics API endpoint (now merged into platform)
-  api_url <- "https://api.genetics.opentargets.org/graphql"
+  # OpenTargets Platform API endpoint
+  api_url <- "https://api.platform.opentargets.org/api/v4/graphql"
+
+  # If using gene names, convert to IDs first
+
+  if (!is.null(gene_names)) {
+    if (verbose) message("Converting gene names to Ensembl IDs...")
+    gene_ids <- sapply(gene_names, function(gene) {
+      tryCatch({
+        search_gene_id(gene, api_url)
+      }, error = function(e) {
+        warning("Could not find gene: ", gene, call. = FALSE)
+        return(NA)
+      })
+    })
+    gene_ids <- gene_ids[!is.na(gene_ids)]
+  }
+
+  if (length(gene_ids) == 0) {
+    stop("No valid gene IDs found.", call. = FALSE)
+  }
 
   results <- list()
 
-  if (!is.null(study_ids)) {
-    for (study_id in study_ids) {
-      if (verbose) message("Fetching L2G scores for study: ", study_id)
+  for (gene_id in gene_ids) {
+    if (verbose) message("Fetching L2G data for gene: ", gene_id)
 
-      query <- sprintf('{
-        studyInfo(studyId: "%s") {
-          studyId
-          traitReported
-          traitCategory
-          pubAuthor
-          pubDate
+    # Query credible sets where this gene is prioritized
+    query <- sprintf('{
+      target(ensemblId: "%s") {
+        id
+        approvedSymbol
+        approvedName
+        geneticConstraint {
+          constraintType
+          score
         }
-        studyLocus2GeneTable(studyId: "%s", pageIndex: 0, pageSize: 500) {
+        associatedDiseases(page: {index: 0, size: 50}) {
           rows {
-            variantId
-            gene {
+            disease {
               id
-              symbol
+              name
             }
-            yProbaModel
-            yProbaDistance
-            yProbaInteraction
-            yProbaMolecularQTL
-            yProbaPathogenicity
+            score
+            datatypeScores {
+              id
+              score
+            }
           }
         }
-      }', study_id, study_id)
+      }
+    }', gene_id)
 
-      tryCatch({
-        response <- make_graphql_request(api_url, query)
+    tryCatch({
+      response <- make_graphql_request(api_url, query)
 
-        if (!is.null(response$data$studyLocus2GeneTable$rows)) {
-          study_info <- response$data$studyInfo
-          rows <- response$data$studyLocus2GeneTable$rows
+      if (!is.null(response$data$target)) {
+        target <- response$data$target
+        diseases <- target$associatedDiseases$rows
 
-          for (r in rows) {
-            if (!is.null(r$yProbaModel) && r$yProbaModel >= min_l2g_score) {
+        if (length(diseases) > 0) {
+          for (d in diseases) {
+            # Extract genetic_association score as proxy for L2G
+            genetic_score <- NA
+            if (!is.null(d$datatypeScores)) {
+              for (dt in d$datatypeScores) {
+                if (dt$id == "genetic_association") {
+                  genetic_score <- dt$score
+                  break
+                }
+              }
+            }
+
+            # Only include if genetic score meets threshold
+            if (!is.na(genetic_score) && genetic_score >= min_l2g_score) {
               results[[length(results) + 1]] <- data.frame(
-                study_id = study_id,
-                trait_reported = study_info$traitReported %||% NA,
-                trait_category = study_info$traitCategory %||% NA,
-                variant_id = r$variantId,
-                gene_id = r$gene$id,
-                gene_name = r$gene$symbol,
-                y_proba_full_model = r$yProbaModel,
-                y_proba_logi_distance = r$yProbaDistance %||% NA,
-                y_proba_logi_interaction = r$yProbaInteraction %||% NA,
-                y_proba_logi_molecularQTL = r$yProbaMolecularQTL %||% NA,
-                y_proba_logi_pathogenicity = r$yProbaPathogenicity %||% NA,
+                gene_id = target$id,
+                gene_name = target$approvedSymbol,
+                gene_description = target$approvedName,
+                disease_id = d$disease$id,
+                disease_name = d$disease$name,
+                overall_score = d$score,
+                genetic_association_score = genetic_score,
                 stringsAsFactors = FALSE
               )
             }
           }
         }
-      }, error = function(e) {
-        warning("Error fetching L2G data for study: ", study_id, " - ", e$message,
-                call. = FALSE)
-      })
+      }
+    }, error = function(e) {
+      warning("Error fetching L2G data for gene: ", gene_id, " - ", e$message,
+              call. = FALSE)
+    })
 
-      Sys.sleep(0.3)  # Rate limiting
-    }
+    Sys.sleep(0.3)  # Rate limiting
   }
 
   if (length(results) > 0) {
     combined <- do.call(rbind, results)
+    # Sort by genetic association score
+    combined <- combined[order(-combined$genetic_association_score), ]
     if (verbose) {
-      message(sprintf("Retrieved %d L2G associations.", nrow(combined)))
+      message(sprintf("Retrieved %d L2G associations for %d genes.",
+                      nrow(combined), length(gene_ids)))
     }
     return(combined)
   } else {
@@ -383,37 +416,35 @@ prepare_opentargets_data <- function(gene_names,
     if (verbose) message("  Saved: ", assoc_file)
   }
 
-  # 2. For L2G, we need to find relevant studies
-  # Note: L2G scores are study-specific, so without study IDs we provide the associations
-  if (verbose) message("\n[2/2] Note: L2G scores require specific GWAS study IDs.")
-  if (verbose) message("  Use fetch_l2g_scores() with specific study IDs for L2G data.")
+  # 2. Fetch L2G scores for the same genes
+  if (verbose) message("\n[2/2] Fetching L2G scores...")
+  l2g <- fetch_l2g_scores(gene_names = gene_names, min_l2g_score = 0.1, verbose = verbose)
 
-  # Create placeholder L2G file with proper structure
   l2g_file <- file.path(output_dir, "l2g_annotated_full.txt")
-  l2g_placeholder <- data.frame(
-    study_id = character(),
-    variant_id = character(),
-    gene_id = character(),
-    gene_name = character(),
-    y_proba_full_model = numeric(),
-    y_proba_logi_distance = numeric(),
-    y_proba_logi_interaction = numeric(),
-    y_proba_logi_molecularQTL = numeric(),
-    y_proba_logi_pathogenicity = numeric(),
-    trait_reported = character(),
-    trait_category = character(),
-    stringsAsFactors = FALSE
-  )
-  write.table(l2g_placeholder, l2g_file, sep = "\t", quote = FALSE, row.names = FALSE)
-  if (verbose) message("  Created placeholder: ", l2g_file)
+  if (nrow(l2g) > 0) {
+    write.table(l2g, l2g_file, sep = "\t", quote = FALSE, row.names = FALSE)
+    if (verbose) message("  Saved: ", l2g_file)
+  } else {
+    # Create empty file with headers
+    l2g_placeholder <- data.frame(
+      gene_id = character(),
+      gene_name = character(),
+      gene_description = character(),
+      disease_id = character(),
+      disease_name = character(),
+      overall_score = numeric(),
+      genetic_association_score = numeric(),
+      stringsAsFactors = FALSE
+    )
+    write.table(l2g_placeholder, l2g_file, sep = "\t", quote = FALSE, row.names = FALSE)
+    if (verbose) message("  Created empty file: ", l2g_file)
+  }
 
   if (verbose) {
     message("\n=== Data Preparation Complete ===")
     message("\nGenerated files:")
     message("  - disease_target_genetic_associations.txt")
-    message("  - l2g_annotated_full.txt (placeholder)")
-    message("\nFor L2G data, run:")
-    message('  l2g <- fetch_l2g_scores(study_ids = c("GCST004773", "GCST002783"))')
+    message("  - l2g_annotated_full.txt")
   }
 
   return(list(
