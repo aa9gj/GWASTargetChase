@@ -21,35 +21,44 @@
 #' @export gwasFollowup
 
 gwasFollowup <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", zoo_dir = NULL) {
+  # Validate input files
+  if (!nzchar(sumStats) || !file.exists(sumStats)) {
+    stop("Summary statistics file not found: '", sumStats, "'. ",
+         "Check the file path or verify the package is installed correctly.")
+  }
+  if (!nzchar(felGTF) || !file.exists(felGTF)) {
+    stop("GTF file not found: '", felGTF, "'. ",
+         "Check the file path or verify the package is installed correctly.")
+  }
   # Create output directory if it doesn't exist
   if (!dir.exists(ResultsPath)) {
     dir.create(ResultsPath, recursive = TRUE)
   }
-  # Read in GTF file for cats and keep only pc genes
+  # Load bundled package data
   print("Loading OpenTargets Genetic Association file from this package")
-  tryCatch({
-    data("disease_target_genetic_association", envir = environment())
-  }, error = function(e) {
+  suppressWarnings(data("disease_target_genetic_association", envir = environment()))
+  if (!exists("disease_target_genetic_association", envir = environment())) {
     stop("Required data 'disease_target_genetic_association' not found. ",
-         "Please use gwasFollowupMan() with your own prepared data files, ",
-         "or prepare the data using geneticAssocPrep(). See ?geneticAssocPrep for details.")
-  })
+         "The package may not be installed correctly. Try reinstalling:\n",
+         "  remove.packages('GWASTargetChase')\n",
+         "  devtools::install_github('aa9gj/GWASTargetChase')")
+  }
   print("Loading OpenTargets locus to gene file from this package")
-  tryCatch({
-    data("l2g_annotated_full", envir = environment())
-  }, error = function(e) {
+  suppressWarnings(data("l2g_annotated_full", envir = environment()))
+  if (!exists("l2g_annotated_full", envir = environment())) {
     stop("Required data 'l2g_annotated_full' not found. ",
-         "Please use gwasFollowupMan() with your own prepared data files, ",
-         "or prepare the data using l2gPrep(). See ?l2gPrep for details.")
-  })
+         "The package may not be installed correctly. Try reinstalling:\n",
+         "  remove.packages('GWASTargetChase')\n",
+         "  devtools::install_github('aa9gj/GWASTargetChase')")
+  }
   print("loading IMPC phenotype data from this package")
-  tryCatch({
-    data("impc", envir = environment())
-  }, error = function(e) {
+  suppressWarnings(data("impc", envir = environment()))
+  if (!exists("impc", envir = environment())) {
     stop("Required data 'impc' not found. ",
-         "Please use gwasFollowupMan() with your own prepared data files, ",
-         "or prepare the data using IMPCprep(). See ?IMPCprep for details.")
-  })
+         "The package may not be installed correctly. Try reinstalling:\n",
+         "  remove.packages('GWASTargetChase')\n",
+         "  devtools::install_github('aa9gj/GWASTargetChase')")
+  }
   print("Reading the gtf file and filtering for protein coding genes, this might take a while")
   cat_gtf <- as.data.frame(rtracklayer::import(felGTF))
   cat_pc_gene_gtf <- filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")

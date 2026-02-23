@@ -22,6 +22,13 @@
 #' @export gwasFollowupMan
 
 gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", impc = NULL, assocOT, l2gOT, zoo_dir = NULL) {
+  # Validate input files
+  if (!nzchar(sumStats) || !file.exists(sumStats)) {
+    stop("Summary statistics file not found: '", sumStats, "'")
+  }
+  if (!nzchar(felGTF) || !file.exists(felGTF)) {
+    stop("GTF file not found: '", felGTF, "'")
+  }
   # Create output directory if it doesn't exist
   if (!dir.exists(ResultsPath)) {
     dir.create(ResultsPath, recursive = TRUE)
