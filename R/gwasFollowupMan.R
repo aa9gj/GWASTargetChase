@@ -84,7 +84,7 @@ gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005
                        width = 50,   # Progress bar width. Defaults to getOption("width")
                        char = "=")   # Character used to create the bar
   for (i in seq_along(ot_genes)) {
-    results_g2d[[i]] <- gene2diseaseMan(ot_genes[i], association_data)
+    results_g2d[[i]] <- gene2disease(ot_genes[i], association_data)
     setTxtProgressBar(pb, i)
   }
   close(pb)
@@ -110,7 +110,7 @@ gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005
                        width = 50,   # Progress bar width. Defaults to getOption("width")
                        char = "=")   # Character used to create the bar
   for (i in seq_along(ot_genes)) {
-    results_l2g[[i]] <- locus2geneMan(ot_genes[i], l2g_data)
+    results_l2g[[i]] <- locus2gene(ot_genes[i], l2g_data)
     setTxtProgressBar(pb, i)
   }
   close(pb)

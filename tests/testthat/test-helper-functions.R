@@ -43,20 +43,6 @@ test_that("gene2disease uses word boundaries correctly", {
   expect_equal(result$gene_name, "FTO")
 })
 
-test_that("gene2diseaseMan returns correct results", {
-  assoc_data <- data.frame(
-    gene_name = c("BRCA1", "BRCA2", "TP53"),
-    gene_id = c("ENSG1", "ENSG2", "ENSG3"),
-    disease_name = c("breast cancer", "breast cancer", "cancer"),
-    score = c(0.95, 0.94, 0.88),
-    stringsAsFactors = FALSE
-  )
-
-  result <- gene2diseaseMan("BRCA1", assoc_data)
-  expect_equal(nrow(result), 1)
-  expect_equal(result$gene_name, "BRCA1")
-})
-
 test_that("locus2gene returns correct results for known genes", {
   l2g_data <- data.frame(
     study_id = c("GCST1", "GCST1", "GCST2"),
@@ -82,20 +68,6 @@ test_that("locus2gene returns empty data.frame for unknown genes", {
 
   result <- locus2gene("NONEXISTENT", l2g_data)
   expect_equal(nrow(result), 0)
-})
-
-test_that("locus2geneMan returns correct results", {
-  l2g_data <- data.frame(
-    study_id = c("GCST1", "GCST2"),
-    gene_name = c("TCF7L2", "PCSK9"),
-    y_proba_full_model = c(0.91, 0.94),
-    trait_reported = c("T2D", "LDL"),
-    stringsAsFactors = FALSE
-  )
-
-  result <- locus2geneMan("TCF7L2", l2g_data)
-  expect_equal(nrow(result), 1)
-  expect_equal(result$gene_name, "TCF7L2")
 })
 
 test_that("load_zoonomia_orthologs extracts gene symbols correctly", {
