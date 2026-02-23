@@ -27,6 +27,7 @@ Imports:
     rtracklayer,
     arrow,
     jsonlite,
+    curl,
     S4Vectors,
     tibble,
     magrittr,
