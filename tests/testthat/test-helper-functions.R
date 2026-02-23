@@ -97,3 +97,92 @@ test_that("locus2geneMan returns correct results", {
   expect_equal(nrow(result), 1)
   expect_equal(result$gene_name, "TCF7L2")
 })
+
+test_that("load_zoonomia_orthologs extracts gene symbols correctly", {
+  zoo_dir <- system.file("extdata", package = "GWASTargetChase")
+  result <- load_zoonomia_orthologs("human", "cat", zoo_dir)
+  expect_true(is.data.frame(result))
+  expect_true("gene_symbol" %in% colnames(result))
+  expect_true("orthology_class" %in% colnames(result))
+  expect_true("V1" %in% colnames(result))
+  expect_true("V3" %in% colnames(result))
+  expect_true("hills_grade" %in% colnames(result))
+  expect_true(nrow(result) > 0)
+  # Check that gene symbols are extracted (no ENST prefix)
+  expect_false(any(grepl("^ENST", result$gene_symbol)))
+  # Check known gene is present
+  expect_true("FTO" %in% result$gene_symbol)
+})
+
+test_that("load_zoonomia_orthologs fails for missing files", {
+  expect_error(load_zoonomia_orthologs("human", "elephant"),
+               "Zoonomia orthology file not found")
+})
+
+test_that("translate_genes returns correct human orthologs for cat genes", {
+  zoo_dir <- system.file("extdata", package = "GWASTargetChase")
+  result <- translate_genes(c("FTO", "GNPDA2", "TMEM18"), "human", "cat", zoo_dir)
+  expect_true(is.data.frame(result))
+  expect_true(nrow(result) > 0)
+  expect_true("original_gene" %in% colnames(result))
+  expect_true("target_gene" %in% colnames(result))
+  expect_true("orthology_class" %in% colnames(result))
+  expect_true("hills_grade" %in% colnames(result))
+  expect_true("FTO" %in% result$target_gene)
+})
+
+test_that("translate_genes returns correct mouse orthologs for cat genes", {
+  zoo_dir <- system.file("extdata", package = "GWASTargetChase")
+  result <- translate_genes(c("FTO", "GNPDA2"), "mouse", "cat", zoo_dir)
+  expect_true(is.data.frame(result))
+  expect_true(nrow(result) > 0)
+  # Mouse gene names may differ in case (e.g., Fto vs FTO)
+  expect_true("Fto" %in% result$target_gene || "FTO" %in% toupper(result$target_gene))
+})
+
+test_that("translate_genes handles case-insensitive matching", {
+  zoo_dir <- system.file("extdata", package = "GWASTargetChase")
+  result <- translate_genes(c("fto", "gnpda2"), "human", "cat", zoo_dir)
+  expect_true(nrow(result) > 0)
+})
+
+test_that("translate_genes returns empty data.frame for unknown genes", {
+  zoo_dir <- system.file("extdata", package = "GWASTargetChase")
+  result <- translate_genes(c("NONEXISTENT_GENE"), "human", "cat", zoo_dir)
+  expect_equal(nrow(result), 0)
+  expect_true("original_gene" %in% colnames(result))
+  expect_true("target_gene" %in% colnames(result))
+})
+
+test_that("add_orthology_info adds metadata columns to results", {
+  results_df <- data.frame(
+    gene_name = c("FTO", "MC4R", "UNKNOWN"),
+    score = c(0.9, 0.8, 0.7),
+    stringsAsFactors = FALSE
+  )
+  ortho_df <- data.frame(
+    target_gene = c("FTO", "MC4R"),
+    orthology_class = c("one2one", "one2one"),
+    V1 = c("GENE", "GENE"),
+    V3 = c("I", "I"),
+    hills_grade = c("A", "A"),
+    stringsAsFactors = FALSE
+  )
+  result <- add_orthology_info(results_df, ortho_df)
+  expect_true("orthology_class" %in% colnames(result))
+  expect_true("hills_grade" %in% colnames(result))
+  expect_equal(nrow(result), 3)
+  # UNKNOWN gene should have NA for orthology
+  unknown_row <- result[result$gene_name == "UNKNOWN", ]
+  expect_true(is.na(unknown_row$orthology_class))
+})
+
+test_that("add_orthology_info handles NULL ortho_df gracefully", {
+  results_df <- data.frame(
+    gene_name = c("FTO"),
+    score = c(0.9),
+    stringsAsFactors = FALSE
+  )
+  result <- add_orthology_info(results_df, NULL)
+  expect_equal(result, results_df)
+})
