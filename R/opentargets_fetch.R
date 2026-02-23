@@ -674,13 +674,16 @@ get_gtf <- function(species = c("human", "mouse", "cat", "dog"),
 #'
 #' Main function to run a complete GWAS gene prioritization analysis using
 #' OpenTargets and IMPC data. Automatically downloads species-specific GTF
-#' annotation files and caches them for future use.
+#' annotation files and caches them for future use. For non-human species,
+#' Zoonomia orthology data is used to translate genes to human orthologs
+#' for OpenTargets and to mouse orthologs for IMPC.
 #'
 #' @param sumStats Path to GWAS summary statistics file (requires chr, ps, p_wald columns)
 #' @param species Species for GTF annotation: "human", "mouse", "cat", or "dog"
 #' @param pval P-value threshold for significance (default: 5e-8)
 #' @param output_dir Directory to save results (default: current directory)
-#' @param window_size Window size around significant SNPs in bp (default: 1000000 = 1Mb)
+#' @param window_size Window size around significant SNPs in bp (default: 500000 = 500Kb)
+#' @param zoo_dir Directory containing Zoonomia orthology files. If NULL, uses package extdata.
 #' @param verbose Print progress messages (default: TRUE)
 #' @return List with genes, summary data, and paths to output files
 #' @export
@@ -709,7 +712,8 @@ run_prioritization_analysis <- function(sumStats,
                                          species = c("human", "mouse", "cat", "dog"),
                                          pval = 5e-8,
                                          output_dir = ".",
-                                         window_size = 1000000,
+                                         window_size = 500000,
+                                         zoo_dir = NULL,
                                          verbose = TRUE) {
 
   species <- match.arg(species)
@@ -807,10 +811,51 @@ run_prioritization_analysis <- function(sumStats,
                        paste(head(genes, 5), collapse = ", "),
                        if(length(genes) > 5) "..." else "")
 
+  # Zoonomia orthology translation for non-human species
+  human_ortho <- NULL
+  mouse_ortho <- NULL
+  if (species != "human") {
+    if (verbose) message("\n[3.5/7] Translating genes using Zoonomia orthology data...")
+    human_ortho <- tryCatch({
+      translate_genes(genes, "human", species, zoo_dir)
+    }, error = function(e) {
+      warning("Could not load Zoonomia human orthology: ", e$message)
+      data.frame(original_gene = character(), target_gene = character(),
+                 orthology_class = character(), V1 = character(),
+                 V3 = character(), hills_grade = character(),
+                 stringsAsFactors = FALSE)
+    })
+    if (nrow(human_ortho) > 0) {
+      ot_genes <- unique(human_ortho$target_gene)
+      if (verbose) message("  Found ", length(ot_genes), " human orthologs for OpenTargets")
+    } else {
+      if (verbose) message("  No human orthologs found, using original gene names")
+      ot_genes <- genes
+    }
+    mouse_ortho <- tryCatch({
+      translate_genes(genes, "mouse", species, zoo_dir)
+    }, error = function(e) {
+      warning("Could not load Zoonomia mouse orthology: ", e$message)
+      data.frame(original_gene = character(), target_gene = character(),
+                 orthology_class = character(), V1 = character(),
+                 V3 = character(), hills_grade = character(),
+                 stringsAsFactors = FALSE)
+    })
+    if (nrow(mouse_ortho) > 0) {
+      impc_gene_names <- unique(mouse_ortho$original_gene)
+      if (verbose) message("  Found ", length(impc_gene_names), " mouse orthologs for IMPC")
+    } else {
+      impc_gene_names <- character(0)
+    }
+  } else {
+    ot_genes <- genes
+    impc_gene_names <- genes
+  }
+
   # Step 4: Fetch OpenTargets gene-disease associations
-  if (verbose) message("\n[4/6] Fetching OpenTargets gene-disease associations...")
+  if (verbose) message("\n[4/7] Fetching OpenTargets gene-disease associations...")
   gene_disease <- tryCatch({
-    fetch_gene_disease_associations(gene_names = genes, verbose = FALSE)
+    fetch_gene_disease_associations(gene_names = ot_genes, verbose = FALSE)
   }, error = function(e) {
     warning("Could not fetch gene-disease associations: ", e$message)
     data.frame()
@@ -820,21 +865,26 @@ run_prioritization_analysis <- function(sumStats,
     message("  Retrieved ", nrow(gene_disease), " associations")
   }
 
-  # Step 5: Fetch IMPC phenotype data
-  if (verbose) message("\n[5/6] Fetching IMPC mouse phenotype data...")
-  impc_data <- tryCatch({
-    fetch_impc_data(gene_names = genes, verbose = FALSE)
-  }, error = function(e) {
-    warning("Could not fetch IMPC data: ", e$message)
-    data.frame()
-  })
+  # Step 5: Fetch IMPC phenotype data (only for genes with mouse orthologs)
+  if (verbose) message("\n[5/7] Fetching IMPC mouse phenotype data...")
+  if (length(impc_gene_names) > 0) {
+    impc_data <- tryCatch({
+      fetch_impc_data(gene_names = impc_gene_names, verbose = FALSE)
+    }, error = function(e) {
+      warning("Could not fetch IMPC data: ", e$message)
+      data.frame()
+    })
+  } else {
+    impc_data <- data.frame()
+    if (verbose) message("  No genes with mouse orthologs to query IMPC")
+  }
 
   if (verbose && nrow(impc_data) > 0) {
     message("  Retrieved data for ", nrow(impc_data), " genes")
   }
 
   # Step 6: Combine results
-  if (verbose) message("\n[6/6] Combining results and writing output files...")
+  if (verbose) message("\n[6/7] Combining results and writing output files...")
 
   # Create gene summary table
   gene_summary <- data.frame(gene_name = genes, stringsAsFactors = FALSE)
@@ -865,6 +915,9 @@ run_prioritization_analysis <- function(sumStats,
     }
   }
 
+  # Add Zoonomia orthology metadata
+  gene_summary <- add_orthology_info(gene_summary, human_ortho)
+
   # Add GeneCards links
   gene_summary$genecards_url <- paste0(
     "https://www.genecards.org/Search/Keyword?queryString=",
@@ -881,6 +934,8 @@ run_prioritization_analysis <- function(sumStats,
     if (nrow(impc_data) > 0) {
       gene_disease <- merge(gene_disease, impc_data, by = "gene_name", all.x = TRUE)
     }
+    # Add Zoonomia orthology metadata
+    gene_disease <- add_orthology_info(gene_disease, human_ortho)
     write.table(gene_disease, g2d_file, sep = "\t", quote = FALSE, row.names = FALSE)
   }
 
@@ -889,17 +944,23 @@ run_prioritization_analysis <- function(sumStats,
     write.table(impc_data, impc_file, sep = "\t", quote = FALSE, row.names = FALSE)
   }
 
-  # Print summary
+  # Step 7: Print summary
   if (verbose) {
     message("\n=== Analysis Complete ===")
     message("\nSummary:")
     message("  - Species: ", species)
     message("  - Significant SNPs: ", nrow(sig_gwas))
     message("  - Genes identified: ", length(genes))
+    if (species != "human") {
+      message("  - Human orthologs (Zoonomia): ", length(ot_genes))
+      message("  - Mouse orthologs (Zoonomia): ", length(impc_gene_names))
+    }
     message("  - Genes with disease associations: ",
             sum(!is.na(gene_summary$n_disease_associations)))
-    message("  - Genes with IMPC phenotypes: ",
-            sum(!is.na(gene_summary$`#phenotype_hits`)))
+    if ("#phenotype_hits" %in% colnames(gene_summary)) {
+      message("  - Genes with IMPC phenotypes: ",
+              sum(!is.na(gene_summary$`#phenotype_hits`)))
+    }
     message("\nOutput files saved to: ", normalizePath(output_dir))
     message("  - gene_summary.txt (main results)")
     if (nrow(gene_disease) > 0) message("  - gene_disease_associations.txt")

@@ -68,9 +68,9 @@ gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = 
   gwas <- fread(sumStats)
   gwas$chr <- gsub("^20$", "X", gwas$chr)
   sig_gwas <- filter(gwas, p_wald <= pval)
-  print("Overlap genes within significant loci (1Mb)")
-  sig_gwas$start <- sig_gwas$ps - 1000000
-  sig_gwas$end <- sig_gwas$ps + 1000000
+  print("Overlap genes within significant loci (500Kb upstream and downstream)")
+  sig_gwas$start <- sig_gwas$ps - 500000
+  sig_gwas$end <- sig_gwas$ps + 500000
   tryCatch(sig_gwas_ranges <- makeGRangesFromDataFrame(sig_gwas, keep.extra.columns = T, seqnames.field = "chr"),
            error = function(e)
              stop("nothing is being reported using this p-value, consider increasing it"))
