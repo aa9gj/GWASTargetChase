@@ -78,7 +78,7 @@ test_that("load_zoonomia_orthologs extracts gene symbols correctly", {
   expect_true("orthology_class" %in% colnames(result))
   expect_true("V1" %in% colnames(result))
   expect_true("V3" %in% colnames(result))
-  expect_true("hills_grade" %in% colnames(result))
+  expect_true("orthology_grade" %in% colnames(result))
   expect_true(nrow(result) > 0)
   # Check that gene symbols are extracted (no ENST prefix)
   expect_false(any(grepl("^ENST", result$gene_symbol)))
@@ -99,7 +99,7 @@ test_that("translate_genes returns correct human orthologs for cat genes", {
   expect_true("original_gene" %in% colnames(result))
   expect_true("target_gene" %in% colnames(result))
   expect_true("orthology_class" %in% colnames(result))
-  expect_true("hills_grade" %in% colnames(result))
+  expect_true("orthology_grade" %in% colnames(result))
   expect_true("FTO" %in% result$target_gene)
 })
 
@@ -137,12 +137,12 @@ test_that("add_orthology_info adds metadata columns to results", {
     orthology_class = c("one2one", "one2one"),
     V1 = c("GENE", "GENE"),
     V3 = c("I", "I"),
-    hills_grade = c("A", "A"),
+    orthology_grade = c("A", "A"),
     stringsAsFactors = FALSE
   )
   result <- add_orthology_info(results_df, ortho_df)
   expect_true("orthology_class" %in% colnames(result))
-  expect_true("hills_grade" %in% colnames(result))
+  expect_true("orthology_grade" %in% colnames(result))
   expect_equal(nrow(result), 3)
   # UNKNOWN gene should have NA for orthology
   unknown_row <- result[result$gene_name == "UNKNOWN", ]

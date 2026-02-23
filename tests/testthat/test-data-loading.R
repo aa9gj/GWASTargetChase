@@ -57,6 +57,6 @@ test_that("zoonomia files have expected structure", {
   expect_true("orthology_class" %in% colnames(zoo))
   expect_true("V1" %in% colnames(zoo))
   expect_true("V3" %in% colnames(zoo))
-  expect_true("hills_grade" %in% colnames(zoo))
+  expect_true("orthology_grade" %in% colnames(zoo))
   expect_true(nrow(zoo) > 0)
 })

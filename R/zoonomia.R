@@ -6,7 +6,7 @@
 #' @param target_species Target species: "human" or "mouse"
 #' @param query_species Query species: "cat" or "dog"
 #' @param zoo_dir Directory containing zoonomia files. If NULL, uses package extdata.
-#' @return data.frame with columns: gene_symbol, t_gene, orthology_class, V1, V3, hills_grade
+#' @return data.frame with columns: gene_symbol, t_gene, orthology_class, V1, V3, orthology_grade
 #' @importFrom data.table fread
 #' @export
 load_zoonomia_orthologs <- function(target_species, query_species, zoo_dir = NULL) {
@@ -29,7 +29,7 @@ load_zoonomia_orthologs <- function(target_species, query_species, zoo_dir = NUL
 
   # Keep relevant columns and deduplicate per gene symbol
   result <- unique(as.data.frame(
-    zoo_data[, c("gene_symbol", "t_gene", "orthology_class", "V1", "V3", "hills_grade")]
+    zoo_data[, c("gene_symbol", "t_gene", "orthology_class", "V1", "V3", "orthology_grade")]
   ))
 
   return(result)
@@ -47,7 +47,7 @@ load_zoonomia_orthologs <- function(target_species, query_species, zoo_dir = NUL
 #' @param target_species Target species: "human" or "mouse"
 #' @param query_species Query species: "cat" or "dog"
 #' @param zoo_dir Directory containing zoonomia files. If NULL, uses package extdata.
-#' @return data.frame with columns: original_gene, target_gene, orthology_class, V1, V3, hills_grade
+#' @return data.frame with columns: original_gene, target_gene, orthology_class, V1, V3, orthology_grade
 #' @export
 translate_genes <- function(genes, target_species, query_species, zoo_dir = NULL) {
   zoo <- load_zoonomia_orthologs(target_species, query_species, zoo_dir)
@@ -65,7 +65,7 @@ translate_genes <- function(genes, target_species, query_species, zoo_dir = NULL
       orthology_class = matched$orthology_class,
       V1 = matched$V1,
       V3 = matched$V3,
-      hills_grade = matched$hills_grade,
+      orthology_grade = matched$orthology_grade,
       stringsAsFactors = FALSE
     )
     result <- unique(result)
@@ -77,7 +77,7 @@ translate_genes <- function(genes, target_species, query_species, zoo_dir = NULL
       orthology_class = character(),
       V1 = character(),
       V3 = character(),
-      hills_grade = character(),
+      orthology_grade = character(),
       stringsAsFactors = FALSE
     ))
   }
@@ -85,7 +85,7 @@ translate_genes <- function(genes, target_species, query_species, zoo_dir = NULL
 
 #' Get Zoonomia Orthology Info for Results
 #'
-#' Adds orthology metadata columns (orthology_class, V1, V3, hills_grade)
+#' Adds orthology metadata columns (orthology_class, V1, V3, orthology_grade)
 #' to a results data frame by matching on gene_name.
 #'
 #' @param results_df data.frame with a gene_name column
@@ -97,7 +97,7 @@ add_orthology_info <- function(results_df, ortho_df) {
     return(results_df)
   }
 
-  ortho_info <- unique(ortho_df[, c("target_gene", "orthology_class", "V1", "V3", "hills_grade")])
+  ortho_info <- unique(ortho_df[, c("target_gene", "orthology_class", "V1", "V3", "orthology_grade")])
   names(ortho_info)[1] <- "gene_name"
 
   merged <- merge(results_df, ortho_info, by = "gene_name", all.x = TRUE)

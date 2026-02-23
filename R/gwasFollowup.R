@@ -177,7 +177,7 @@ gwasFollowup <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, R
                                 "y_proba_logi_pathogenicity", "trait_reported",
                                 "trait_category", "Phenotype_Hits",
                                 "rs", "ps", "p_wald", "locus",
-                                "orthology_class", "V1", "V3", "hills_grade"), available_cols)
+                                "orthology_class", "V1", "V3", "orthology_grade"), available_cols)
     results_l2g_filter <- results_l2g_df[, filter_cols, drop = FALSE]
     results_l2g_filter$gene_cards <- paste0("https://www.genecards.org/Search/Keyword?queryString=", results_l2g_filter$gene_name)
     if ("y_proba_full_model" %in% colnames(results_l2g_filter)) {
