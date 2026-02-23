@@ -22,6 +22,13 @@
 #' @export gwasFollowupMan
 
 gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", impc = NULL, assocOT, l2gOT, zoo_dir = NULL) {
+  # Validate input files
+  if (!nzchar(sumStats) || !file.exists(sumStats)) {
+    stop("Summary statistics file not found: '", sumStats, "'")
+  }
+  if (!nzchar(felGTF) || !file.exists(felGTF)) {
+    stop("GTF file not found: '", felGTF, "'")
+  }
   # Create output directory if it doesn't exist
   if (!dir.exists(ResultsPath)) {
     dir.create(ResultsPath, recursive = TRUE)
@@ -84,7 +91,7 @@ gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005
                        width = 50,   # Progress bar width. Defaults to getOption("width")
                        char = "=")   # Character used to create the bar
   for (i in seq_along(ot_genes)) {
-    results_g2d[[i]] <- gene2diseaseMan(ot_genes[i], association_data)
+    results_g2d[[i]] <- gene2disease(ot_genes[i], association_data)
     setTxtProgressBar(pb, i)
   }
   close(pb)
@@ -110,7 +117,7 @@ gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005
                        width = 50,   # Progress bar width. Defaults to getOption("width")
                        char = "=")   # Character used to create the bar
   for (i in seq_along(ot_genes)) {
-    results_l2g[[i]] <- locus2geneMan(ot_genes[i], l2g_data)
+    results_l2g[[i]] <- locus2gene(ot_genes[i], l2g_data)
     setTxtProgressBar(pb, i)
   }
   close(pb)

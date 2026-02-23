@@ -16,8 +16,6 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
-    httr,
-    rappdirs,
     R.utils
 VignetteBuilder: knitr
 Depends: 
@@ -29,6 +27,7 @@ Imports:
     rtracklayer,
     arrow,
     jsonlite,
+    curl,
     S4Vectors,
     tibble,
     magrittr,

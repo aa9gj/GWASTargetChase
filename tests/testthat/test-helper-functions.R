@@ -43,20 +43,6 @@ test_that("gene2disease uses word boundaries correctly", {
   expect_equal(result$gene_name, "FTO")
 })
 
-test_that("gene2diseaseMan returns correct results", {
-  assoc_data <- data.frame(
-    gene_name = c("BRCA1", "BRCA2", "TP53"),
-    gene_id = c("ENSG1", "ENSG2", "ENSG3"),
-    disease_name = c("breast cancer", "breast cancer", "cancer"),
-    score = c(0.95, 0.94, 0.88),
-    stringsAsFactors = FALSE
-  )
-
-  result <- gene2diseaseMan("BRCA1", assoc_data)
-  expect_equal(nrow(result), 1)
-  expect_equal(result$gene_name, "BRCA1")
-})
-
 test_that("locus2gene returns correct results for known genes", {
   l2g_data <- data.frame(
     study_id = c("GCST1", "GCST1", "GCST2"),
@@ -84,20 +70,6 @@ test_that("locus2gene returns empty data.frame for unknown genes", {
   expect_equal(nrow(result), 0)
 })
 
-test_that("locus2geneMan returns correct results", {
-  l2g_data <- data.frame(
-    study_id = c("GCST1", "GCST2"),
-    gene_name = c("TCF7L2", "PCSK9"),
-    y_proba_full_model = c(0.91, 0.94),
-    trait_reported = c("T2D", "LDL"),
-    stringsAsFactors = FALSE
-  )
-
-  result <- locus2geneMan("TCF7L2", l2g_data)
-  expect_equal(nrow(result), 1)
-  expect_equal(result$gene_name, "TCF7L2")
-})
-
 test_that("load_zoonomia_orthologs extracts gene symbols correctly", {
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
   result <- load_zoonomia_orthologs("human", "cat", zoo_dir)
@@ -106,7 +78,7 @@ test_that("load_zoonomia_orthologs extracts gene symbols correctly", {
   expect_true("orthology_class" %in% colnames(result))
   expect_true("V1" %in% colnames(result))
   expect_true("V3" %in% colnames(result))
-  expect_true("hills_grade" %in% colnames(result))
+  expect_true("orthology_grade" %in% colnames(result))
   expect_true(nrow(result) > 0)
   # Check that gene symbols are extracted (no ENST prefix)
   expect_false(any(grepl("^ENST", result$gene_symbol)))
@@ -127,7 +99,7 @@ test_that("translate_genes returns correct human orthologs for cat genes", {
   expect_true("original_gene" %in% colnames(result))
   expect_true("target_gene" %in% colnames(result))
   expect_true("orthology_class" %in% colnames(result))
-  expect_true("hills_grade" %in% colnames(result))
+  expect_true("orthology_grade" %in% colnames(result))
   expect_true("FTO" %in% result$target_gene)
 })
 
@@ -165,12 +137,12 @@ test_that("add_orthology_info adds metadata columns to results", {
     orthology_class = c("one2one", "one2one"),
     V1 = c("GENE", "GENE"),
     V3 = c("I", "I"),
-    hills_grade = c("A", "A"),
+    orthology_grade = c("A", "A"),
     stringsAsFactors = FALSE
   )
   result <- add_orthology_info(results_df, ortho_df)
   expect_true("orthology_class" %in% colnames(result))
-  expect_true("hills_grade" %in% colnames(result))
+  expect_true("orthology_grade" %in% colnames(result))
   expect_equal(nrow(result), 3)
   # UNKNOWN gene should have NA for orthology
   unknown_row <- result[result$gene_name == "UNKNOWN", ]

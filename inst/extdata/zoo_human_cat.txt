@@ -1,4 +1,4 @@
-t_gene	t_transcript	q_gene	q_transcript	orthology_class	V1	V3	hills_grade
+t_gene	t_transcript	q_gene	q_transcript	orthology_class	V1	V3	orthology_grade
 ENSG00000140718	ENST00000354533.FTO	reg_1001	ENST00000354533.FTO.101	one2one	GENE	I	A
 ENSG00000140718	ENST00000354533.FTO	reg_1001	ENST00000354533.FTO.102	one2one	GENE	I	A
 ENSG00000182396	ENST00000328928.GNPDA2	reg_1002	ENST00000328928.GNPDA2.201	one2one	GENE	I	A

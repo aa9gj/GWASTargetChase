@@ -1,14 +1,20 @@
 #' gwasFollowup
 #'
-#' main package function that will take GWAS sumstats, a gtf file, and a pvalue of interest to returns information on the genes of interest
+#' Main package function. Takes GWAS summary statistics (with a closest gene
+#' column), a GTF file, and a p-value threshold. For each significant locus it:
+#' 1. Finds the closest gene (from the 'gene' column in sumstats)
+#' 2. Extracts all protein-coding genes within 500kb of that gene's TSS from the GTF
+#' 3. Translates genes via Zoonomia orthology (non-human species)
+#' 4. Queries OpenTargets API for disease associations
+#' 5. Queries IMPC API for mouse phenotypes
 #'
-#' @param sumStats GWAS summary statistics file. It assumed a ps, and chr columns.
-#' @param felGTF GTF file
-#' @param species Species of the GWAS data: "human", "cat", or "dog". For non-human species, Zoonomia orthology is used to translate genes. Default is "cat".
-#' @param pval default is 5*10-8 and you could change but make sure to use standard form
-#' @param ResultsPath default is the working directory but you can provide a path of your own ensuring it ends with a /
+#' @param sumStats GWAS summary statistics file. Must have columns: chr, ps, p_wald, gene
+#' @param felGTF GTF file for the species
+#' @param species Species of the GWAS data: "human", "cat", or "dog". Default is "cat".
+#' @param pval P-value threshold. Default is 5e-8.
+#' @param ResultsPath Directory to write output files. Created if it doesn't exist.
 #' @param zoo_dir Directory containing Zoonomia orthology files. If NULL, uses package extdata.
-#' @return Writes g2d_results.txt, l2g_results.txt, l2g_filtered_results.txt, and plots.pdf to ResultsPath
+#' @return Writes g2d_results.txt, l2g_results.txt, and plots.pdf to ResultsPath
 #' @importFrom dplyr filter left_join inner_join %>%
 #' @importFrom data.table fread
 #' @import GenomicRanges
@@ -21,56 +27,73 @@
 #' @export gwasFollowup
 
 gwasFollowup <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", zoo_dir = NULL) {
+  # Validate input files
+  if (!nzchar(sumStats) || !file.exists(sumStats)) {
+    stop("Summary statistics file not found: '", sumStats, "'. ",
+         "Check the file path or verify the package is installed correctly.")
+  }
+  if (!nzchar(felGTF) || !file.exists(felGTF)) {
+    stop("GTF file not found: '", felGTF, "'. ",
+         "Check the file path or verify the package is installed correctly.")
+  }
   # Create output directory if it doesn't exist
   if (!dir.exists(ResultsPath)) {
     dir.create(ResultsPath, recursive = TRUE)
   }
-  # Read in GTF file for cats and keep only pc genes
-  print("Loading OpenTargets Genetic Association file from this package")
-  tryCatch({
-    data("disease_target_genetic_association", envir = environment())
-  }, error = function(e) {
-    stop("Required data 'disease_target_genetic_association' not found. ",
-         "Please use gwasFollowupMan() with your own prepared data files, ",
-         "or prepare the data using geneticAssocPrep(). See ?geneticAssocPrep for details.")
-  })
-  print("Loading OpenTargets locus to gene file from this package")
-  tryCatch({
-    data("l2g_annotated_full", envir = environment())
-  }, error = function(e) {
-    stop("Required data 'l2g_annotated_full' not found. ",
-         "Please use gwasFollowupMan() with your own prepared data files, ",
-         "or prepare the data using l2gPrep(). See ?l2gPrep for details.")
-  })
-  print("loading IMPC phenotype data from this package")
-  tryCatch({
-    data("impc", envir = environment())
-  }, error = function(e) {
-    stop("Required data 'impc' not found. ",
-         "Please use gwasFollowupMan() with your own prepared data files, ",
-         "or prepare the data using IMPCprep(). See ?IMPCprep for details.")
-  })
-  print("Reading the gtf file and filtering for protein coding genes, this might take a while")
-  cat_gtf <- as.data.frame(rtracklayer::import(felGTF))
-  cat_pc_gene_gtf <- filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
-  print("reading the summary statistics file, filtering based on the input p_value")
+
+  # --- Step 1: Read sumstats and filter by p-value ---
+  print("Reading the summary statistics file, filtering based on the input p_value")
   gwas <- fread(sumStats)
+  if (!"gene" %in% colnames(gwas)) {
+    stop("Summary statistics file must contain a 'gene' column with the closest gene per locus.")
+  }
   gwas$chr <- gsub("^20$", "X", gwas$chr)
   sig_gwas <- filter(gwas, p_wald <= pval)
-  print("Overlap genes within significant loci (500Kb upstream and downstream)")
-  sig_gwas$start <- sig_gwas$ps - 500000
-  sig_gwas$end <- sig_gwas$ps + 500000
+  if (nrow(sig_gwas) == 0) {
+    stop("No significant SNPs found at p-value threshold ", pval, ". Consider increasing it.")
+  }
   sig_gwas$locus <- paste0("locus_", seq_len(nrow(sig_gwas)))
-  tryCatch(sig_gwas_ranges <- makeGRangesFromDataFrame(sig_gwas, keep.extra.columns = T, seqnames.field = "chr"),
-  error = function(e)
-    stop("nothing is being reported using this p-value, consider increasing it"))
-  cat_pc_gene_ranges <- makeGRangesFromDataFrame(cat_pc_gene_gtf, keep.extra.columns = T)
-  hits <- findOverlaps(cat_pc_gene_ranges, sig_gwas_ranges)
-  olap <- pintersect(cat_pc_gene_ranges[queryHits(hits)],sig_gwas_ranges[subjectHits(hits)])
-  overlap_genes <- as.vector(na.exclude(olap$gene_name))
-  genes <- overlap_genes
 
-  # Zoonomia orthology translation for non-human species
+  # Get unique closest genes from significant loci
+  closest_genes <- unique(sig_gwas$gene)
+  print(paste0("Found ", length(closest_genes), " unique closest gene(s) across significant loci: ",
+               paste(closest_genes, collapse = ", ")))
+
+  # --- Step 2: Read GTF and find genes within 500kb of each closest gene's TSS ---
+  print("Reading the GTF file and filtering for protein coding genes")
+  cat_gtf <- as.data.frame(rtracklayer::import(felGTF))
+  cat_pc_gene_gtf <- filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
+
+  print("Finding genes within 500kb of each closest gene's TSS")
+  all_nearby_genes <- character()
+  for (cg in closest_genes) {
+    # Find this gene in the GTF
+    gene_row <- cat_pc_gene_gtf[toupper(cat_pc_gene_gtf$gene_name) == toupper(cg), , drop = FALSE]
+    if (nrow(gene_row) == 0) {
+      warning("Closest gene '", cg, "' not found in GTF. Skipping.")
+      next
+    }
+    # Use TSS (start for + strand, end for - strand)
+    tss <- ifelse(gene_row$strand[1] == "-", gene_row$end[1], gene_row$start[1])
+    chr <- as.character(gene_row$seqnames[1])
+
+    # Find all protein-coding genes within 500kb of TSS
+    window_start <- tss - 500000
+    window_end <- tss + 500000
+    nearby <- cat_pc_gene_gtf[as.character(cat_pc_gene_gtf$seqnames) == chr &
+                                cat_pc_gene_gtf$start <= window_end &
+                                cat_pc_gene_gtf$end >= window_start, ]
+    all_nearby_genes <- c(all_nearby_genes, nearby$gene_name)
+  }
+  genes <- unique(all_nearby_genes)
+
+  if (length(genes) == 0) {
+    stop("No protein-coding genes found within 500kb of any closest gene TSS.")
+  }
+  print(paste0("Found ", length(genes), " unique gene(s) within 500kb windows: ",
+               paste(genes, collapse = ", ")))
+
+  # --- Step 3: Zoonomia orthology translation for non-human species ---
   human_ortho <- NULL
   mouse_ortho <- NULL
   if (species != "human") {
@@ -85,7 +108,7 @@ gwasFollowup <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, R
     print("Translating genes to mouse orthologs using Zoonomia data for IMPC")
     mouse_ortho <- translate_genes(genes, "mouse", species, zoo_dir)
     if (nrow(mouse_ortho) > 0) {
-      impc_genes <- unique(mouse_ortho$original_gene)
+      impc_genes <- unique(mouse_ortho$target_gene)
     } else {
       warning("No mouse orthologs found in Zoonomia data.")
       impc_genes <- character(0)
@@ -95,133 +118,113 @@ gwasFollowup <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, R
     impc_genes <- genes
   }
 
-  print("Getting SNP information")
-  hits2 <- findOverlaps(sig_gwas_ranges, cat_pc_gene_ranges)
-  olap2 <- pintersect(sig_gwas_ranges[queryHits(hits2)],cat_pc_gene_ranges[subjectHits(hits2)])
-  olap2_df <- as.data.frame(olap2)
-  olap2_df$join <- paste0(olap2_df$seqnames, "_", olap2_df$start, "_", olap2_df$end)
-  hits3 <- findOverlaps(cat_pc_gene_ranges, sig_gwas_ranges)
-  olap3 <- pintersect(cat_pc_gene_ranges[queryHits(hits3)],sig_gwas_ranges[subjectHits(hits3)])
-  olap3_df <- as.data.frame(olap3)
-  # Keep essential columns: seqnames, start, end, width, strand, and gene_name
-  keep_cols <- c("seqnames", "start", "end", "width", "strand", "gene_name")
-  keep_cols <- keep_cols[keep_cols %in% colnames(olap3_df)]
-  olap3_df <- olap3_df[, keep_cols, drop = FALSE]
-  olap3_df$join <- paste0(olap3_df$seqnames, "_", olap3_df$start, "_", olap3_df$end)
-  sig_SNP_info <- inner_join(olap2_df, olap3_df, by = "join")
-  # Keep relevant columns by name instead of hardcoded indices
-  snp_keep <- intersect(c("rs", "ps", "p_wald", "af", "beta", "se", "locus",
-                           "gene_name", "seqnames.y", "start.y", "end.y"),
-                        colnames(sig_SNP_info))
-  sig_SNP_info <- sig_SNP_info[, snp_keep, drop = FALSE]
-  print("Genes to Disease GWAS follow-up")
+  # --- Step 4: Query OpenTargets API for disease associations ---
+  print("Querying OpenTargets API for gene-disease associations")
   results_g2d <- list()
-  pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
-                       max = length(ot_genes), # Maximum value of the progress bar
-                       style = 3,    # Progress bar style (also available style = 1 and style = 2)
-                       width = 50,   # Progress bar width. Defaults to getOption("width")
-                       char = "=")   # Character used to create the bar
+  pb <- txtProgressBar(min = 0, max = length(ot_genes), style = 3, width = 50, char = "=")
   for (i in seq_along(ot_genes)) {
-    results_g2d[[i]] <- gene2disease(ot_genes[i], disease_target_genetic_association)
+    results_g2d[[i]] <- fetch_opentargets(ot_genes[i])
     setTxtProgressBar(pb, i)
   }
   close(pb)
-  results_g2d_df <- as.data.frame(do.call("rbind", results_g2d))
+  results_g2d_df <- do.call("rbind", results_g2d)
+  if (is.null(results_g2d_df)) results_g2d_df <- data.frame()
+
+  # --- Step 5: Query IMPC API for mouse phenotypes ---
+  print("Querying IMPC API for mouse phenotype data")
+  impc_results <- list()
+  if (length(impc_genes) > 0) {
+    pb <- txtProgressBar(min = 0, max = length(impc_genes), style = 3, width = 50, char = "=")
+    for (i in seq_along(impc_genes)) {
+      impc_results[[i]] <- fetch_impc(impc_genes[i])
+      setTxtProgressBar(pb, i)
+    }
+    close(pb)
+  }
+  impc_df <- do.call("rbind", impc_results)
+  if (is.null(impc_df)) impc_df <- data.frame()
+
+  # --- Step 6: Join IMPC phenotypes with disease results ---
+  if (nrow(results_g2d_df) > 0 && nrow(impc_df) > 0) {
+    results_g2d_df <- left_join(results_g2d_df, impc_df, by = "gene_name")
+  }
+
+  # Add Zoonomia orthology metadata
   if (nrow(results_g2d_df) > 0) {
-    # Only join IMPC for genes with confirmed mouse orthologs
-    if (species != "human" && length(impc_genes) > 0) {
-      impc_filtered <- impc[toupper(impc$gene_name) %in% toupper(impc_genes), , drop = FALSE]
-      results_g2d_df <- left_join(results_g2d_df, impc_filtered, by = "gene_name")
-    } else {
-      results_g2d_df <- left_join(results_g2d_df, impc, by = "gene_name")
-    }
-    if ("gene_name" %in% colnames(sig_SNP_info)) {
-      results_g2d_df <- inner_join(results_g2d_df, sig_SNP_info, by = "gene_name")
-    }
-    # Add Zoonomia orthology metadata
     results_g2d_df <- add_orthology_info(results_g2d_df, human_ortho)
   }
-  print("writing results")
-  write.table(results_g2d_df, file.path(ResultsPath, "g2d_results.txt"), quote = F, row.names = F, sep = "\t")
-  print("Locus to Genes GWAS follow-up")
-  results_l2g <- list()
-  pb <- txtProgressBar(min = 0,      # Minimum value of the progress bar
-                       max = length(ot_genes), # Maximum value of the progress bar
-                       style = 3,    # Progress bar style (also available style = 1 and style = 2)
-                       width = 50,   # Progress bar width. Defaults to getOption("width")
-                       char = "=")   # Character used to create the bar
-  for (i in seq_along(ot_genes)) {
-    results_l2g[[i]] <- locus2gene(ot_genes[i], l2g_annotated_full)
-    setTxtProgressBar(pb, i)
+
+  # --- Step 7: Write results ---
+  print("Writing results")
+  write.table(results_g2d_df, file.path(ResultsPath, "g2d_results.txt"),
+              quote = FALSE, row.names = FALSE, sep = "\t")
+
+  # Write a summary of IMPC results
+  if (nrow(impc_df) > 0) {
+    write.table(impc_df, file.path(ResultsPath, "impc_results.txt"),
+                quote = FALSE, row.names = FALSE, sep = "\t")
   }
-  close(pb)
-  results_l2g_df <- as.data.frame(do.call("rbind", results_l2g))
-  if (nrow(results_l2g_df) > 0) {
-    # Only join IMPC for genes with confirmed mouse orthologs
-    if (species != "human" && length(impc_genes) > 0) {
-      impc_filtered <- impc[toupper(impc$gene_name) %in% toupper(impc_genes), , drop = FALSE]
-      results_l2g_df <- left_join(results_l2g_df, impc_filtered, by = "gene_name")
-    } else {
-      results_l2g_df <- left_join(results_l2g_df, impc, by = "gene_name")
+
+  # --- Step 8: Create plots ---
+  print("Creating plots per significant locus")
+  sig_gwas$start <- sig_gwas$ps - 500000
+  sig_gwas$end <- sig_gwas$ps + 500000
+  sig_gwas_ranges <- makeGRangesFromDataFrame(sig_gwas, keep.extra.columns = TRUE, seqnames.field = "chr")
+  cat_pc_gene_ranges <- makeGRangesFromDataFrame(cat_pc_gene_gtf, keep.extra.columns = TRUE)
+
+  # SNP to gene mapping for plots
+  hits <- findOverlaps(sig_gwas_ranges, cat_pc_gene_ranges)
+  if (length(hits) > 0) {
+    olap_snp <- as.data.frame(sig_gwas_ranges[queryHits(hits)])
+    olap_gene <- as.data.frame(cat_pc_gene_ranges[subjectHits(hits)])
+    sig_SNP_info <- data.frame(
+      rs = olap_snp$rs, ps = olap_snp$ps, p_wald = olap_snp$p_wald,
+      locus = olap_snp$locus, gene_name = olap_gene$gene_name,
+      gene_start = olap_gene$start, gene_end = olap_gene$end,
+      stringsAsFactors = FALSE
+    )
+
+    # Full GWAS data for manhattan-style plots
+    gwas_sum_ranges <- makeGRangesFromDataFrame(gwas, seqnames.field = "chr",
+                                                 start.field = "ps", end.field = "ps",
+                                                 keep.extra.columns = TRUE)
+    hits4 <- findOverlaps(sig_gwas_ranges, gwas_sum_ranges)
+
+    plot.list <- list()
+    unique_loci <- unique(sig_SNP_info$locus)
+    for (i in seq_along(unique_loci)) {
+      locus_snps <- filter(sig_SNP_info, locus == unique_loci[i])
+      # Get all GWAS SNPs in this locus window
+      locus_idx <- which(sig_gwas$locus == unique_loci[i])
+      if (length(locus_idx) == 0) next
+      locus_range <- sig_gwas_ranges[locus_idx[1]]
+      locus_hits <- findOverlaps(locus_range, gwas_sum_ranges)
+      if (length(locus_hits) == 0) next
+      locus_gwas <- as.data.frame(gwas_sum_ranges[subjectHits(locus_hits)])
+
+      p3 <- ggplot(data = locus_gwas) +
+        geom_point(aes(start, -log10(p_wald))) +
+        theme(text = element_text(size = 6)) +
+        ylab("-Log10 P-value") +
+        xlab("") +
+        theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+      p4 <- ggplot(data = locus_snps) +
+        geom_linerange(aes(x = gene_name, ymin = gene_start, ymax = gene_end)) +
+        coord_flip() +
+        xlab("Gene Name") + theme(text = element_text(size = 6))
+
+      plot.list[[i]] <- p3 + p4 + plot_layout(ncol = 1, heights = c(6, 6))
     }
-    if ("gene_name" %in% colnames(sig_SNP_info)) {
-      results_l2g_df <- inner_join(results_l2g_df, sig_SNP_info, by = "gene_name")
+
+    if (length(plot.list) > 0) {
+      pdf(file.path(ResultsPath, "plots.pdf"))
+      for (i in seq_along(plot.list)) {
+        if (!is.null(plot.list[[i]])) print(plot.list[[i]])
+      }
+      dev.off()
     }
-    # Add Zoonomia orthology metadata
-    results_l2g_df <- add_orthology_info(results_l2g_df, human_ortho)
-    # Create filtered L2G results with key columns
-    available_cols <- colnames(results_l2g_df)
-    filter_cols <- intersect(c("gene_name", "study_id", "variant_id", "gene_id",
-                                "y_proba_full_model", "y_proba_logi_distance",
-                                "y_proba_logi_interaction", "y_proba_logi_molecularQTL",
-                                "y_proba_logi_pathogenicity", "trait_reported",
-                                "trait_category", "Phenotype_Hits",
-                                "rs", "ps", "p_wald", "locus",
-                                "orthology_class", "V1", "V3", "hills_grade"), available_cols)
-    results_l2g_filter <- results_l2g_df[, filter_cols, drop = FALSE]
-    results_l2g_filter$gene_cards <- paste0("https://www.genecards.org/Search/Keyword?queryString=", results_l2g_filter$gene_name)
-    if ("y_proba_full_model" %in% colnames(results_l2g_filter)) {
-      names(results_l2g_filter)[names(results_l2g_filter) == 'y_proba_full_model'] <- 'full_l2g_score'
-    }
-    if ("Phenotype_Hits" %in% colnames(results_l2g_filter)) {
-      names(results_l2g_filter)[names(results_l2g_filter) == 'Phenotype_Hits'] <- 'IMPC_results'
-    }
-  } else {
-    results_l2g_filter <- results_l2g_df
   }
-  print("writing results")
-  write.table(results_l2g_df, file.path(ResultsPath, "l2g_results.txt"), quote = F, row.names = F, sep = "\t")
-  write.table(results_l2g_filter, file.path(ResultsPath, "l2g_filtered_results.txt"), quote = F, row.names = F, sep = "\t")
-  print("Creating plots per significant locus, this might take a while")
-  gwas_sum_ranges <- makeGRangesFromDataFrame(gwas, seqnames.field = "chr", start.field = "ps", end.field = "ps", keep.extra.columns = T)
-  hits4 <- findOverlaps(sig_gwas_ranges, gwas_sum_ranges)
-  olap4 <- pintersect(sig_gwas_ranges[queryHits(hits4)],gwas_sum_ranges[subjectHits(hits4)])
-  olap4_df <- as.data.frame(olap4)
-  hits5 <- findOverlaps(gwas_sum_ranges, sig_gwas_ranges)
-  olap5 <- pintersect(gwas_sum_ranges[queryHits(hits5)],sig_gwas_ranges[subjectHits(hits5)])
-  olap5_df <- as.data.frame(olap5)
-  test_input_for_plot <- inner_join(olap4_df, olap5_df, by = "start")
-  data.list <- list()
-  snp.list <- list()
-  plot.list <- list()
-  unique_loci <- unique(test_input_for_plot$locus)
-  for (i in seq_along(unique_loci)) {
-    data.list[[i]] <- filter(test_input_for_plot, locus == unique_loci[i])
-    snp.list[[i]] <- filter(sig_SNP_info, locus == unique_loci[i])
-    p3 <- ggplot(data = data.list[[i]]) + geom_point(aes(start,-log10(p_wald.y))) +
-      geom_text(data=data.list[[i]] %>% filter(-log10(p_wald.y) >= 5),
-                aes(start, -log10(p_wald.y),label=rs.y)) + theme(text = element_text(size = 6)) + ylab("-Log10 Corrected P-value")
-    p4 <- ggplot(data = snp.list[[i]]) +
-      geom_linerange(aes(x = gene_name, ymin = start.y, ymax = end.y)) +
-      coord_flip() +
-      xlab("Gene Name") + theme(text = element_text(size = 6))
-    p3b <- p3 + xlab("") + theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
-    plot.list[[i]] <- p3b + p4 + plot_layout(ncol = 1, heights = c(6, 6))
-  }
-  pdf(file.path(ResultsPath, "plots.pdf"))
-  for (i in seq_along(plot.list)) {
-    print(plot.list[[i]])
-  }
-  dev.off()
+
   print("All done, happy exploring")
 }
