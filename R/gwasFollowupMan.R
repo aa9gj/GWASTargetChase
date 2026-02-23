@@ -22,6 +22,10 @@
 #' @export gwasFollowupMan
 
 gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", impc = NULL, assocOT, l2gOT, zoo_dir = NULL) {
+  # Create output directory if it doesn't exist
+  if (!dir.exists(ResultsPath)) {
+    dir.create(ResultsPath, recursive = TRUE)
+  }
   print("Reading OpenTargets Genetic Association file")
   association_data <- fread(assocOT)
   print("Reading OpenTargets locus to gene file")

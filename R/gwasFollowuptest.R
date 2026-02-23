@@ -20,6 +20,10 @@
 
 gwasFollowuptest <- function(sumStats, felGTF, pval = 0.00000005, ResultsPath = ".",
                              phenomePath = NULL, twasPath = NULL) {
+  # Create output directory if it doesn't exist
+  if (!dir.exists(ResultsPath)) {
+    dir.create(ResultsPath, recursive = TRUE)
+  }
   # Read in GTF file for cats and keep only pc genes
   print("Loading OpenTargets Genetic Association file from this package")
   tryCatch({
