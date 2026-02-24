@@ -6,7 +6,7 @@
 #' using the geneticAssocPrep, l2gPrep, and IMPCprep functions.
 #'
 #' @param sumStats GWAS summary statistics file. Must have columns: ps, chr, p_wald.
-#' @param felGTF GTF file for the species
+#' @param gtf GTF file for the species
 #' @param species Species of the GWAS data: "human", "cat", or "dog". For non-human species, Zoonomia orthology is used to translate genes. Default is "cat".
 #' @param pval P-value threshold. Default is 5e-8.
 #' @param ResultsPath Directory to write output files. Created if it doesn't exist.
@@ -22,13 +22,13 @@
 #' @importFrom S4Vectors queryHits subjectHits
 #' @export TargetChaseManual
 
-TargetChaseManual <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", impc = NULL, assocOT, l2gOT, zoo_dir = NULL) {
+TargetChaseManual <- function(sumStats, gtf, species = "cat", pval = 0.00000005, ResultsPath = ".", impc = NULL, assocOT, l2gOT, zoo_dir = NULL) {
   # Validate input files
   if (!nzchar(sumStats) || !file.exists(sumStats)) {
     stop("Summary statistics file not found: '", sumStats, "'")
   }
-  if (!nzchar(felGTF) || !file.exists(felGTF)) {
-    stop("GTF file not found: '", felGTF, "'")
+  if (!nzchar(gtf) || !file.exists(gtf)) {
+    stop("GTF file not found: '", gtf, "'")
   }
   # Create output directory if it doesn't exist
   if (!dir.exists(ResultsPath)) {
@@ -41,8 +41,8 @@ TargetChaseManual <- function(sumStats, felGTF, species = "cat", pval = 0.000000
   print("Reading IMPC phenotype data")
   impc_data <- fread(impc)
   print("Reading the gtf file and filtering for protein coding genes, this might take a while")
-  cat_gtf <- as.data.frame(rtracklayer::import(felGTF))
-  cat_pc_gene_gtf <- filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
+  species_gtf <- as.data.frame(rtracklayer::import(gtf))
+  pc_gene_gtf <- filter(species_gtf, gene_biotype == "protein_coding", type == "gene")
   print("reading the summary statistics file, filtering based on the input p_value")
   gwas <- fread(sumStats)
   gwas$chr <- gsub("^20$", "X", gwas$chr)
@@ -53,9 +53,9 @@ TargetChaseManual <- function(sumStats, felGTF, species = "cat", pval = 0.000000
   tryCatch(sig_gwas_ranges <- makeGRangesFromDataFrame(sig_gwas, keep.extra.columns = T, seqnames.field = "chr"),
            error = function(e)
              stop("nothing is being reported using this p-value, consider increasing it"))
-  cat_pc_gene_ranges <- makeGRangesFromDataFrame(cat_pc_gene_gtf, keep.extra.columns = T)
-  hits <- findOverlaps(cat_pc_gene_ranges, sig_gwas_ranges)
-  olap <- pintersect(cat_pc_gene_ranges[queryHits(hits)],sig_gwas_ranges[subjectHits(hits)])
+  pc_gene_ranges <- makeGRangesFromDataFrame(pc_gene_gtf, keep.extra.columns = T)
+  hits <- findOverlaps(pc_gene_ranges, sig_gwas_ranges)
+  olap <- pintersect(pc_gene_ranges[queryHits(hits)],sig_gwas_ranges[subjectHits(hits)])
   overlap_genes <- as.vector(na.exclude(olap$gene_name))
   genes <- overlap_genes
 

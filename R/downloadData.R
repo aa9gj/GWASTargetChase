@@ -33,7 +33,7 @@
 #'   paths <- downloadData(destdir = "my_data")
 #'   TargetChaseManual(
 #'     sumStats = "my_gwas_sumstats.txt",
-#'     felGTF   = "Felis_catus.Felis_catus_9.0.106.gtf",
+#'     gtf   = "Felis_catus.Felis_catus_9.0.106.gtf",
 #'     impc     = paths$impc,
 #'     assocOT  = paths$assoc,
 #'     l2gOT    = paths$l2g
@@ -318,7 +318,7 @@ downloadData <- function(destdir = "GWASTargetChase_data",
   cat("Usage with TargetChaseManual():\n")
   cat("  TargetChaseManual(\n")
   cat("    sumStats = 'your_gwas_sumstats.txt',\n")
-  cat("    felGTF   = 'your_species.gtf',\n")
+  cat("    gtf   = 'your_species.gtf',\n")
   if (!is.null(output_paths$impc))
     cat("    impc     = '", output_paths$impc, "',\n", sep = "")
   if (!is.null(output_paths$assoc))

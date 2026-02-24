@@ -4,7 +4,7 @@
 test_that("TargetChase errors on missing sumstats file", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   expect_error(
-    TargetChase(sumStats = "/nonexistent/path/sumstats.txt", felGTF = gtf),
+    TargetChase(sumStats = "/nonexistent/path/sumstats.txt", gtf = gtf),
     "Summary statistics file not found"
   )
 })
@@ -12,16 +12,16 @@ test_that("TargetChase errors on missing sumstats file", {
 test_that("TargetChase errors on missing GTF file", {
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   expect_error(
-    TargetChase(sumStats = sumstats, felGTF = "/nonexistent/path/file.gtf"),
+    TargetChase(sumStats = sumstats, gtf = "/nonexistent/path/file.gtf"),
     "GTF file not found"
   )
 })
 
 test_that("TargetChase errors on empty string paths", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
-  expect_error(TargetChase(sumStats = "", felGTF = gtf), "Summary statistics file not found")
+  expect_error(TargetChase(sumStats = "", gtf = gtf), "Summary statistics file not found")
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
-  expect_error(TargetChase(sumStats = sumstats, felGTF = ""), "GTF file not found")
+  expect_error(TargetChase(sumStats = sumstats, gtf = ""), "GTF file not found")
 })
 
 test_that("TargetChase errors when p-value too strict (no significant SNPs)", {
@@ -32,7 +32,7 @@ test_that("TargetChase errors when p-value too strict (no significant SNPs)", {
   on.exit(unlink(out_dir, recursive = TRUE))
 
   expect_error(
-    TargetChase(sumStats = sumstats, felGTF = gtf, pval = 1e-100, ResultsPath = out_dir),
+    TargetChase(sumStats = sumstats, gtf = gtf, pval = 1e-100, ResultsPath = out_dir),
     "No significant SNPs found"
   )
 })
@@ -53,7 +53,7 @@ test_that("TargetChase errors when sumstats lacks 'gene' column", {
 
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   expect_error(
-    TargetChase(sumStats = bad_sumstats, felGTF = gtf, ResultsPath = file.path(mock_dir, "out")),
+    TargetChase(sumStats = bad_sumstats, gtf = gtf, ResultsPath = file.path(mock_dir, "out")),
     "gene.*column"
   )
 })
@@ -62,7 +62,7 @@ test_that("TargetChase errors when sumstats lacks 'gene' column", {
 test_that("TargetChaseManual errors on missing sumstats file", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   expect_error(
-    TargetChaseManual(sumStats = "/nonexistent/sumstats.txt", felGTF = gtf,
+    TargetChaseManual(sumStats = "/nonexistent/sumstats.txt", gtf = gtf,
                       assocOT = "dummy", l2gOT = "dummy"),
     "Summary statistics file not found"
   )
@@ -71,7 +71,7 @@ test_that("TargetChaseManual errors on missing sumstats file", {
 test_that("TargetChaseManual errors on missing GTF file", {
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   expect_error(
-    TargetChaseManual(sumStats = sumstats, felGTF = "/nonexistent/file.gtf",
+    TargetChaseManual(sumStats = sumstats, gtf = "/nonexistent/file.gtf",
                       assocOT = "dummy", l2gOT = "dummy"),
     "GTF file not found"
   )

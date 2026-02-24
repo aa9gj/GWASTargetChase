@@ -4,12 +4,12 @@
 \alias{TargetChase}
 \title{TargetChase}
 \usage{
-TargetChase(sumStats, felGTF, species = "cat", pval = 5e-08, ResultsPath = ".", zoo_dir = NULL)
+TargetChase(sumStats, gtf, species = "cat", pval = 5e-08, ResultsPath = ".", zoo_dir = NULL)
 }
 \arguments{
 \item{sumStats}{GWAS summary statistics file. Must have columns: chr, ps, p_wald, gene}
 
-\item{felGTF}{GTF file for the species}
+\item{gtf}{GTF file for the species}
 
 \item{species}{Species of the GWAS data: "human", "cat", or "dog". Default is "cat".}
 

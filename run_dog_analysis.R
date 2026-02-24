@@ -38,7 +38,7 @@ cat("Results will be written to:", results_dir, "\n\n")
 
 results <- TargetChase(
   sumStats    = sumstats,
-  felGTF      = gtf,
+  gtf      = gtf,
   species     = "dog",
   pval        = 5e-8,
   ResultsPath = results_dir

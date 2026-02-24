@@ -13,7 +13,7 @@ test_that("TargetChase runs end-to-end with example cat data", {
   expect_no_error(
     TargetChase(
       sumStats = sumstats,
-      felGTF = gtf,
+      gtf = gtf,
       species = "cat",
       pval = 5e-8,
       ResultsPath = out_dir,
@@ -38,7 +38,7 @@ test_that("TargetChase creates output directory if it doesn't exist", {
   expect_no_error(
     TargetChase(
       sumStats = sumstats,
-      felGTF = gtf,
+      gtf = gtf,
       species = "cat",
       pval = 5e-8,
       ResultsPath = out_dir,
@@ -61,7 +61,7 @@ test_that("TargetChase with relaxed p-value finds more loci", {
   expect_no_error(
     TargetChase(
       sumStats = sumstats,
-      felGTF = gtf,
+      gtf = gtf,
       species = "cat",
       pval = 1e-4,
       ResultsPath = out_dir,
@@ -82,7 +82,7 @@ test_that("TargetChase g2d_results.txt has content with known genes", {
 
   TargetChase(
     sumStats = sumstats,
-    felGTF = gtf,
+    gtf = gtf,
     species = "cat",
     pval = 5e-8,
     ResultsPath = out_dir,
@@ -121,15 +121,15 @@ test_that("TargetChase correctly reads and filters summary statistics", {
 
 test_that("TargetChase correctly parses GTF and finds nearby genes", {
   gtf_path <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
-  cat_gtf <- as.data.frame(rtracklayer::import(gtf_path))
-  cat_pc_gene_gtf <- dplyr::filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
+  species_gtf <- as.data.frame(rtracklayer::import(gtf_path))
+  pc_gene_gtf <- dplyr::filter(species_gtf, gene_biotype == "protein_coding", type == "gene")
 
   # Should have 4 gene entries (FTO on chr1, GNPDA2 on chr2, TMEM18 on chr2, FTO on chr16)
-  expect_equal(nrow(cat_pc_gene_gtf), 4)
+  expect_equal(nrow(pc_gene_gtf), 4)
 
   # Test TSS-based 500kb window for FTO on chr1
-  gene_row <- cat_pc_gene_gtf[cat_pc_gene_gtf$gene_name == "FTO" &
-                                as.character(cat_pc_gene_gtf$seqnames) == "1", ]
+  gene_row <- pc_gene_gtf[pc_gene_gtf$gene_name == "FTO" &
+                                as.character(pc_gene_gtf$seqnames) == "1", ]
   expect_equal(nrow(gene_row), 1)
   # FTO is on + strand, so TSS = start
   tss <- gene_row$start[1]
@@ -139,19 +139,19 @@ test_that("TargetChase correctly parses GTF and finds nearby genes", {
   chr <- "1"
   window_start <- tss - 500000
   window_end <- tss + 500000
-  nearby <- cat_pc_gene_gtf[as.character(cat_pc_gene_gtf$seqnames) == chr &
-                              cat_pc_gene_gtf$start <= window_end &
-                              cat_pc_gene_gtf$end >= window_start, ]
+  nearby <- pc_gene_gtf[as.character(pc_gene_gtf$seqnames) == chr &
+                              pc_gene_gtf$start <= window_end &
+                              pc_gene_gtf$end >= window_start, ]
   expect_true("FTO" %in% nearby$gene_name)
 })
 
 test_that("TargetChase handles TSS correctly for minus strand genes", {
   gtf_path <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
-  cat_gtf <- as.data.frame(rtracklayer::import(gtf_path))
-  cat_pc_gene_gtf <- dplyr::filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
+  species_gtf <- as.data.frame(rtracklayer::import(gtf_path))
+  pc_gene_gtf <- dplyr::filter(species_gtf, gene_biotype == "protein_coding", type == "gene")
 
   # TMEM18 is on the - strand
-  tmem <- cat_pc_gene_gtf[cat_pc_gene_gtf$gene_name == "TMEM18", ]
+  tmem <- pc_gene_gtf[pc_gene_gtf$gene_name == "TMEM18", ]
   expect_equal(as.character(tmem$strand), "-")
 
   # TSS for - strand gene should be the 'end' coordinate

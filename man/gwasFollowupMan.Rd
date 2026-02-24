@@ -6,7 +6,7 @@
 \usage{
 TargetChaseManual(
   sumStats,
-  felGTF,
+  gtf,
   species = "cat",
   pval = 5e-08,
   ResultsPath = ".",
@@ -19,7 +19,7 @@ TargetChaseManual(
 \arguments{
 \item{sumStats}{GWAS summary statistics file. Must have columns: ps, chr, p_wald.}
 
-\item{felGTF}{GTF file for the species}
+\item{gtf}{GTF file for the species}
 
 \item{species}{Species of the GWAS data: "human", "cat", or "dog". Default is "cat".}
 
