@@ -16,5 +16,5 @@ geneticAssocPrep(assocOT, diseaseOT, humanGTF, ResultsPath = ".")
 \item{ResultsPath}{default is the working directory but you can provide a path of your own ensuring it ends with a /}
 }
 \description{
-Preparation of OpenTarget data evidence by data source file for gwasFollowupMan function
+Preparation of OpenTarget data evidence by data source file for TargetChaseManual function
 }

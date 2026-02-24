@@ -1,5 +1,5 @@
-# Integration tests for gwasFollowupMan using mock pre-downloaded data.
-# gwasFollowupMan works with pre-downloaded files, so we create mock data
+# Integration tests for TargetChaseManual using mock pre-downloaded data.
+# TargetChaseManual works with pre-downloaded files, so we create mock data
 # to test the full pipeline without requiring real bulk downloads.
 
 # Helper to create mock OpenTargets genetic association data
@@ -47,9 +47,9 @@
   invisible(path)
 }
 
-test_that("gwasFollowupMan runs end-to-end with mock data", {
+test_that("TargetChaseManual runs end-to-end with mock data", {
   # Create temp directory for mock data and output
-  mock_dir <- file.path(tempdir(), "test_gwasFollowupMan")
+  mock_dir <- file.path(tempdir(), "test_TargetChaseManual")
   out_dir <- file.path(mock_dir, "output")
   dir.create(mock_dir, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(mock_dir, recursive = TRUE))
@@ -67,7 +67,7 @@ test_that("gwasFollowupMan runs end-to-end with mock data", {
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
 
   expect_no_error(
-    gwasFollowupMan(
+    TargetChaseManual(
       sumStats = sumstats,
       felGTF = gtf,
       species = "cat",
@@ -85,8 +85,8 @@ test_that("gwasFollowupMan runs end-to-end with mock data", {
   expect_true(file.exists(file.path(out_dir, "l2g_results.txt")))
 })
 
-test_that("gwasFollowupMan g2d_results.txt contains expected gene matches", {
-  mock_dir <- file.path(tempdir(), "test_gwasFollowupMan_g2d")
+test_that("TargetChaseManual g2d_results.txt contains expected gene matches", {
+  mock_dir <- file.path(tempdir(), "test_TargetChaseManual_g2d")
   out_dir <- file.path(mock_dir, "output")
   dir.create(mock_dir, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(mock_dir, recursive = TRUE))
@@ -102,7 +102,7 @@ test_that("gwasFollowupMan g2d_results.txt contains expected gene matches", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
 
-  gwasFollowupMan(
+  TargetChaseManual(
     sumStats = sumstats,
     felGTF = gtf,
     species = "cat",
@@ -122,8 +122,8 @@ test_that("gwasFollowupMan g2d_results.txt contains expected gene matches", {
   }
 })
 
-test_that("gwasFollowupMan l2g_results.txt contains expected gene matches", {
-  mock_dir <- file.path(tempdir(), "test_gwasFollowupMan_l2g")
+test_that("TargetChaseManual l2g_results.txt contains expected gene matches", {
+  mock_dir <- file.path(tempdir(), "test_TargetChaseManual_l2g")
   out_dir <- file.path(mock_dir, "output")
   dir.create(mock_dir, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(mock_dir, recursive = TRUE))
@@ -139,7 +139,7 @@ test_that("gwasFollowupMan l2g_results.txt contains expected gene matches", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
 
-  gwasFollowupMan(
+  TargetChaseManual(
     sumStats = sumstats,
     felGTF = gtf,
     species = "cat",
@@ -158,8 +158,8 @@ test_that("gwasFollowupMan l2g_results.txt contains expected gene matches", {
   }
 })
 
-test_that("gwasFollowupMan adds orthology info to results", {
-  mock_dir <- file.path(tempdir(), "test_gwasFollowupMan_ortho")
+test_that("TargetChaseManual adds orthology info to results", {
+  mock_dir <- file.path(tempdir(), "test_TargetChaseManual_ortho")
   out_dir <- file.path(mock_dir, "output")
   dir.create(mock_dir, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(mock_dir, recursive = TRUE))
@@ -175,7 +175,7 @@ test_that("gwasFollowupMan adds orthology info to results", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
 
-  gwasFollowupMan(
+  TargetChaseManual(
     sumStats = sumstats,
     felGTF = gtf,
     species = "cat",
@@ -195,8 +195,8 @@ test_that("gwasFollowupMan adds orthology info to results", {
   }
 })
 
-test_that("gwasFollowupMan with relaxed p-value captures more SNPs", {
-  mock_dir <- file.path(tempdir(), "test_gwasFollowupMan_relaxed")
+test_that("TargetChaseManual with relaxed p-value captures more SNPs", {
+  mock_dir <- file.path(tempdir(), "test_TargetChaseManual_relaxed")
   out_dir_strict <- file.path(mock_dir, "output_strict")
   out_dir_relaxed <- file.path(mock_dir, "output_relaxed")
   dir.create(mock_dir, recursive = TRUE, showWarnings = FALSE)
@@ -213,14 +213,14 @@ test_that("gwasFollowupMan with relaxed p-value captures more SNPs", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
 
-  gwasFollowupMan(
+  TargetChaseManual(
     sumStats = sumstats, felGTF = gtf, species = "cat",
     pval = 5e-8, ResultsPath = out_dir_strict,
     impc = impc_path, assocOT = assoc_path, l2gOT = l2g_path,
     zoo_dir = zoo_dir
   )
 
-  gwasFollowupMan(
+  TargetChaseManual(
     sumStats = sumstats, felGTF = gtf, species = "cat",
     pval = 1e-5, ResultsPath = out_dir_relaxed,
     impc = impc_path, assocOT = assoc_path, l2gOT = l2g_path,
@@ -232,8 +232,8 @@ test_that("gwasFollowupMan with relaxed p-value captures more SNPs", {
   expect_true(file.exists(file.path(out_dir_relaxed, "g2d_results.txt")))
 })
 
-test_that("gwasFollowupMan works with human species (no orthology translation)", {
-  mock_dir <- file.path(tempdir(), "test_gwasFollowupMan_human")
+test_that("TargetChaseManual works with human species (no orthology translation)", {
+  mock_dir <- file.path(tempdir(), "test_TargetChaseManual_human")
   out_dir <- file.path(mock_dir, "output")
   dir.create(mock_dir, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(mock_dir, recursive = TRUE))
@@ -249,7 +249,7 @@ test_that("gwasFollowupMan works with human species (no orthology translation)",
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
 
   expect_no_error(
-    gwasFollowupMan(
+    TargetChaseManual(
       sumStats = sumstats,
       felGTF = gtf,
       species = "human",

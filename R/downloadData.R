@@ -2,7 +2,7 @@
 #'
 #' Downloads and prepares real data from IMPC, OpenTargets Platform, and
 #' OpenTargets Genetics for use with GWASTargetChase. After running this
-#' function, use the output files with \code{gwasFollowupMan()}.
+#' function, use the output files with \code{TargetChaseManual()}.
 #'
 #' This function downloads:
 #' \itemize{
@@ -28,10 +28,10 @@
 #' @return Invisibly returns a list of output file paths.
 #'
 #' @details
-#' After running this function, use the output files with \code{gwasFollowupMan}:
+#' After running this function, use the output files with \code{TargetChaseManual}:
 #' \preformatted{
 #'   paths <- downloadData(destdir = "my_data")
-#'   gwasFollowupMan(
+#'   TargetChaseManual(
 #'     sumStats = "my_gwas_sumstats.txt",
 #'     felGTF   = "Felis_catus.Felis_catus_9.0.106.gtf",
 #'     impc     = paths$impc,
@@ -315,8 +315,8 @@ downloadData <- function(destdir = "GWASTargetChase_data",
     }
   }
   cat("\n")
-  cat("Usage with gwasFollowupMan():\n")
-  cat("  gwasFollowupMan(\n")
+  cat("Usage with TargetChaseManual():\n")
+  cat("  TargetChaseManual(\n")
   cat("    sumStats = 'your_gwas_sumstats.txt',\n")
   cat("    felGTF   = 'your_species.gtf',\n")
   if (!is.null(output_paths$impc))

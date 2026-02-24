@@ -1,4 +1,4 @@
-#' gwasFollowup
+#' TargetChase
 #'
 #' Main package function. Takes GWAS summary statistics (with a closest gene
 #' column), a GTF file, and a p-value threshold. For each significant locus it:
@@ -24,9 +24,9 @@
 #' @importFrom grDevices pdf dev.off
 #' @importFrom rtracklayer import
 #' @importFrom S4Vectors queryHits subjectHits
-#' @export gwasFollowup
+#' @export TargetChase
 
-gwasFollowup <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", zoo_dir = NULL) {
+TargetChase <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", zoo_dir = NULL) {
   # Validate input files
   if (!nzchar(sumStats) || !file.exists(sumStats)) {
     stop("Summary statistics file not found: '", sumStats, "'. ",

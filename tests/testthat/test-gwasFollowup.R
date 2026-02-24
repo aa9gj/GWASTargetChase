@@ -1,17 +1,17 @@
-# Integration tests for gwasFollowup using example test data.
+# Integration tests for TargetChase using example test data.
 # These tests require network access for API calls.
 
-test_that("gwasFollowup runs end-to-end with example cat data", {
+test_that("TargetChase runs end-to-end with example cat data", {
   skip_if_offline()
 
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
-  out_dir <- file.path(tempdir(), "test_gwasFollowup_cat")
+  out_dir <- file.path(tempdir(), "test_TargetChase_cat")
   on.exit(unlink(out_dir, recursive = TRUE))
 
   expect_no_error(
-    gwasFollowup(
+    TargetChase(
       sumStats = sumstats,
       felGTF = gtf,
       species = "cat",
@@ -25,18 +25,18 @@ test_that("gwasFollowup runs end-to-end with example cat data", {
   expect_true(file.exists(file.path(out_dir, "g2d_results.txt")))
 })
 
-test_that("gwasFollowup creates output directory if it doesn't exist", {
+test_that("TargetChase creates output directory if it doesn't exist", {
   skip_if_offline()
 
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
-  out_dir <- file.path(tempdir(), "test_gwasFollowup_newdir", "subdir")
-  on.exit(unlink(file.path(tempdir(), "test_gwasFollowup_newdir"), recursive = TRUE))
+  out_dir <- file.path(tempdir(), "test_TargetChase_newdir", "subdir")
+  on.exit(unlink(file.path(tempdir(), "test_TargetChase_newdir"), recursive = TRUE))
 
   expect_false(dir.exists(out_dir))
   expect_no_error(
-    gwasFollowup(
+    TargetChase(
       sumStats = sumstats,
       felGTF = gtf,
       species = "cat",
@@ -48,18 +48,18 @@ test_that("gwasFollowup creates output directory if it doesn't exist", {
   expect_true(dir.exists(out_dir))
 })
 
-test_that("gwasFollowup with relaxed p-value finds more loci", {
+test_that("TargetChase with relaxed p-value finds more loci", {
   skip_if_offline()
 
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
-  out_dir <- file.path(tempdir(), "test_gwasFollowup_relaxed")
+  out_dir <- file.path(tempdir(), "test_TargetChase_relaxed")
   on.exit(unlink(out_dir, recursive = TRUE))
 
   # Very relaxed p-value to capture all SNPs
   expect_no_error(
-    gwasFollowup(
+    TargetChase(
       sumStats = sumstats,
       felGTF = gtf,
       species = "cat",
@@ -71,16 +71,16 @@ test_that("gwasFollowup with relaxed p-value finds more loci", {
   expect_true(file.exists(file.path(out_dir, "g2d_results.txt")))
 })
 
-test_that("gwasFollowup g2d_results.txt has content with known genes", {
+test_that("TargetChase g2d_results.txt has content with known genes", {
   skip_if_offline()
 
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
-  out_dir <- file.path(tempdir(), "test_gwasFollowup_content")
+  out_dir <- file.path(tempdir(), "test_TargetChase_content")
   on.exit(unlink(out_dir, recursive = TRUE))
 
-  gwasFollowup(
+  TargetChase(
     sumStats = sumstats,
     felGTF = gtf,
     species = "cat",
@@ -99,7 +99,7 @@ test_that("gwasFollowup g2d_results.txt has content with known genes", {
 })
 
 # --- Test the internal logic without API calls ---
-test_that("gwasFollowup correctly reads and filters summary statistics", {
+test_that("TargetChase correctly reads and filters summary statistics", {
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   gwas <- data.table::fread(sumstats)
 
@@ -119,7 +119,7 @@ test_that("gwasFollowup correctly reads and filters summary statistics", {
   expect_true("FTO" %in% sig_genes)
 })
 
-test_that("gwasFollowup correctly parses GTF and finds nearby genes", {
+test_that("TargetChase correctly parses GTF and finds nearby genes", {
   gtf_path <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   cat_gtf <- as.data.frame(rtracklayer::import(gtf_path))
   cat_pc_gene_gtf <- dplyr::filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
@@ -145,7 +145,7 @@ test_that("gwasFollowup correctly parses GTF and finds nearby genes", {
   expect_true("FTO" %in% nearby$gene_name)
 })
 
-test_that("gwasFollowup handles TSS correctly for minus strand genes", {
+test_that("TargetChase handles TSS correctly for minus strand genes", {
   gtf_path <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   cat_gtf <- as.data.frame(rtracklayer::import(gtf_path))
   cat_pc_gene_gtf <- dplyr::filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
@@ -159,7 +159,7 @@ test_that("gwasFollowup handles TSS correctly for minus strand genes", {
   expect_equal(tss, 700000)
 })
 
-test_that("gwasFollowup zoonomia translation works for example genes", {
+test_that("TargetChase zoonomia translation works for example genes", {
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
   genes <- c("FTO", "GNPDA2", "TMEM18")
 

@@ -1,30 +1,30 @@
 # Tests for input validation and error handling across all functions.
 
-# --- gwasFollowup input validation ---
-test_that("gwasFollowup errors on missing sumstats file", {
+# --- TargetChase input validation ---
+test_that("TargetChase errors on missing sumstats file", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   expect_error(
-    gwasFollowup(sumStats = "/nonexistent/path/sumstats.txt", felGTF = gtf),
+    TargetChase(sumStats = "/nonexistent/path/sumstats.txt", felGTF = gtf),
     "Summary statistics file not found"
   )
 })
 
-test_that("gwasFollowup errors on missing GTF file", {
+test_that("TargetChase errors on missing GTF file", {
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   expect_error(
-    gwasFollowup(sumStats = sumstats, felGTF = "/nonexistent/path/file.gtf"),
+    TargetChase(sumStats = sumstats, felGTF = "/nonexistent/path/file.gtf"),
     "GTF file not found"
   )
 })
 
-test_that("gwasFollowup errors on empty string paths", {
+test_that("TargetChase errors on empty string paths", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
-  expect_error(gwasFollowup(sumStats = "", felGTF = gtf), "Summary statistics file not found")
+  expect_error(TargetChase(sumStats = "", felGTF = gtf), "Summary statistics file not found")
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
-  expect_error(gwasFollowup(sumStats = sumstats, felGTF = ""), "GTF file not found")
+  expect_error(TargetChase(sumStats = sumstats, felGTF = ""), "GTF file not found")
 })
 
-test_that("gwasFollowup errors when p-value too strict (no significant SNPs)", {
+test_that("TargetChase errors when p-value too strict (no significant SNPs)", {
   skip_if_offline()
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
@@ -32,12 +32,12 @@ test_that("gwasFollowup errors when p-value too strict (no significant SNPs)", {
   on.exit(unlink(out_dir, recursive = TRUE))
 
   expect_error(
-    gwasFollowup(sumStats = sumstats, felGTF = gtf, pval = 1e-100, ResultsPath = out_dir),
+    TargetChase(sumStats = sumstats, felGTF = gtf, pval = 1e-100, ResultsPath = out_dir),
     "No significant SNPs found"
   )
 })
 
-test_that("gwasFollowup errors when sumstats lacks 'gene' column", {
+test_that("TargetChase errors when sumstats lacks 'gene' column", {
   # Create a sumstats file without the gene column
   mock_dir <- file.path(tempdir(), "test_no_gene_col")
   dir.create(mock_dir, showWarnings = FALSE)
@@ -53,43 +53,26 @@ test_that("gwasFollowup errors when sumstats lacks 'gene' column", {
 
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   expect_error(
-    gwasFollowup(sumStats = bad_sumstats, felGTF = gtf, ResultsPath = file.path(mock_dir, "out")),
+    TargetChase(sumStats = bad_sumstats, felGTF = gtf, ResultsPath = file.path(mock_dir, "out")),
     "gene.*column"
   )
 })
 
-# --- gwasFollowupFull input validation ---
-test_that("gwasFollowupFull errors on missing sumstats file", {
+# --- TargetChaseManual input validation ---
+test_that("TargetChaseManual errors on missing sumstats file", {
   gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
   expect_error(
-    gwasFollowupFull(sumStats = "/nonexistent/sumstats.txt", felGTF = gtf),
+    TargetChaseManual(sumStats = "/nonexistent/sumstats.txt", felGTF = gtf,
+                      assocOT = "dummy", l2gOT = "dummy"),
     "Summary statistics file not found"
   )
 })
 
-test_that("gwasFollowupFull errors on missing GTF file", {
+test_that("TargetChaseManual errors on missing GTF file", {
   sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
   expect_error(
-    gwasFollowupFull(sumStats = sumstats, felGTF = "/nonexistent/file.gtf"),
-    "GTF file not found"
-  )
-})
-
-# --- gwasFollowupMan input validation ---
-test_that("gwasFollowupMan errors on missing sumstats file", {
-  gtf <- system.file("extdata", "example_cat_gtf.gtf", package = "GWASTargetChase")
-  expect_error(
-    gwasFollowupMan(sumStats = "/nonexistent/sumstats.txt", felGTF = gtf,
-                    assocOT = "dummy", l2gOT = "dummy"),
-    "Summary statistics file not found"
-  )
-})
-
-test_that("gwasFollowupMan errors on missing GTF file", {
-  sumstats <- system.file("extdata", "example_gwas_sumstats.tsv", package = "GWASTargetChase")
-  expect_error(
-    gwasFollowupMan(sumStats = sumstats, felGTF = "/nonexistent/file.gtf",
-                    assocOT = "dummy", l2gOT = "dummy"),
+    TargetChaseManual(sumStats = sumstats, felGTF = "/nonexistent/file.gtf",
+                      assocOT = "dummy", l2gOT = "dummy"),
     "GTF file not found"
   )
 })
@@ -166,7 +149,7 @@ test_that("locus2gene matches exact gene names only", {
 })
 
 # --- Chromosome handling ---
-test_that("gwasFollowup converts chr 20 to X", {
+test_that("TargetChase converts chr 20 to X", {
   # The code does gsub("^20$", "X", ...) on the chr column
   chr_values <- c("1", "2", "20", "X")
   converted <- gsub("^20$", "X", chr_values)

@@ -25,10 +25,8 @@ The human GWAS follow-up data is obtained from the following sources:
 
 - OpenTargets <https://www.opentargets.org/>
 - IMPC <https://www.mousephenotype.org/>
-- PhenomeXcan <http://apps.hakyimlab.org/phenomexcan/>
-- Relevant WebTWAS traits <http://www.webtwas.net/#/diseases>
 
-The data from OpenTargets and IMPC has been wrangled and loaded onto the package (check functions section for reproducing the data). The data from PhenomeXcan and WebTWAS can be downloaded and prepared using functions within this package.
+Cross-species gene translation is performed using Zoonomia orthology data included with the package.
 
 # Installation and Loading
 
@@ -42,8 +40,7 @@ BiocManager::install(c("GenomicRanges", "rtracklayer", "S4Vectors"))
 
 # Install CRAN packages
 install.packages(c("data.table", "dplyr", "arrow", "jsonlite",
-                   "tibble", "magrittr", "ggplot2", "ggpubr",
-                   "patchwork", "remotes"))
+                   "ggplot2", "ggpubr", "patchwork", "remotes"))
 
 # Install GWASTargetChase from GitHub
 remotes::install_github("aa9gj/GWASTargetChase")
@@ -66,36 +63,59 @@ gunzip Felis_catus.Felis_catus_9.0.106.gtf.gz
 
 # Functions
 
-There are 7 exported functions within this package: `gwasFollowup`, `gwasFollowupMan`, `gwasFollowupFull`, `IMPCprep`, `l2gPrep`, `geneticAssocPrep`, and `phenomePrep`
+There are two main functions within this package: `TargetChase` and `TargetChaseManual`. Additional helper functions include `IMPCprep`, `l2gPrep`, `geneticAssocPrep`, and `downloadData`.
 
 Please ensure that your sumStats file has the following column names exactly as such: (The rest can stay as is)
 
 - `p_wald`: This would be the corrected p-values
 - `ps`: SNP position
 - `chr`: chromosome
+- `gene`: closest gene name per locus (required for `TargetChase`)
 
-## gwasFollowup
+## TargetChase
 
-This is the main function of this package. It takes GWAS summary stats and GTF file. Internally, it uses two OpenTarget files and an IMPC phenotype file per gene already lazyloaded into the package by the author.
+This is the main function of this package. It takes GWAS summary stats and a GTF file. It queries the OpenTargets API for gene-disease associations and the IMPC API for mouse knockout phenotypes. For non-human species (cat, dog), it uses Zoonomia orthology to translate genes to human/mouse orthologs.
 
 ```{r}
-gwasFollowup(sumStats = "/path/to/GWAS/Summary/stats",
-             felGTF = "/path/to/feline/or/k9/gtf/file",
-             pval = 0.00005,
-             ResultsPath = "/path/to/results/directory/")
+TargetChase(sumStats = "/path/to/GWAS/Summary/stats",
+            felGTF = "/path/to/feline/or/k9/gtf/file",
+            species = "cat",
+            pval = 0.00005,
+            ResultsPath = "/path/to/results/directory/")
 ```
 
-## gwasFollowupFull
+## TargetChaseManual
 
-This function takes GWAS summary stats and GTF file. Internally, it uses two OpenTarget files and an IMPC phenotype file per gene already lazyloaded onto the package by the author. The additional features here are providing the function with phenomeXcan data (default is NULL if no path is provided) and TWAS unprepared data (default is NULL if no path is provided).
+Use this function when you have pre-downloaded OpenTargets and IMPC data files. This is useful when you have updated data releases or want to avoid repeated API calls.
+
+Once the data has been prepared by the helper functions below (or via `downloadData`), you can use:
 
 ```{r}
-gwasFollowupFull(sumStats = "/path/to/GWAS/summary/stats",
-             felGTF = "/path/to/feline/or/k9/gtf/file",
-             pval = 0.00000005,
-             ResultsPath = "/path/to/results/directory/",
-             phenomePath = "/path/to/PhenomeXcan/data",
-             twasPath = "/path/to/twas/data")
+TargetChaseManual(sumStats = "/path/to/sumstats",
+                  felGTF = "/path/to/Felis_catus.Felis_catus_9.0.106.gtf",
+                  species = "cat",
+                  pval = 0.00005,
+                  ResultsPath = "/path/to/results/",
+                  impc = "/path/to/impc/results",
+                  assocOT = "/path/to/disease_target_genetic_associations",
+                  l2gOT = "/path/to/l2g_annotated_full")
+```
+
+## downloadData
+
+Downloads and prepares all required data files (IMPC, OpenTargets associations, L2G scores, GENCODE GTF) in one step:
+
+```{r}
+paths <- downloadData(destdir = "my_data")
+
+# Then use with TargetChaseManual:
+TargetChaseManual(
+  sumStats = "my_gwas.txt",
+  felGTF = "my_species.gtf",
+  impc = paths$impc,
+  assocOT = paths$assoc,
+  l2gOT = paths$l2g
+)
 ```
 
 ## IMPCprep
@@ -154,49 +174,14 @@ geneticAssocPrep(assocOT = "/path/to/dir/associationByDatasourceDirect.json",
                  ResultsPath = "/path/to/res/")
 ```
 
-## gwasFollowupMan
-
-Once the data has been prepared by the two functions above, you can use the function below:
-
-```{r}
-gwasFollowupMan(sumStats = "/path/to/sumstats",
-                felGTF = "/path/to/Felis_catus.Felis_catus_9.0.106.gtf",
-                pval = 0.00005,
-                ResultsPath = "/path/to/results/",
-                impc = "/path/to/impc/results",
-                assocOT = "/path/to/disease_target_genetic_associations",
-                l2gOT = "/path/to/l2g_annotated_full")
-```
-
-## phenomePrep
-
-Columns containing the data from phenomeXcan analysis which uses a Bayesian colocalization framework through FastEnloc rather than Coloc. Download the data from here:
-
-```{sh}
-wget https://zenodo.org/record/3911190/files/fastenloc-torus-rcp.tsv.gz
-gunzip fastenloc-torus-rcp.tsv.gz
-```
-
-```{r}
-phenomePrep(phenome = "/path/to/downloaded/data",
-            gtf = "/path/to/human/gtf/file",
-            ResultsPath = "/path/to/results/")
-```
-
 # Output
 
-If you use `gwasFollowup` function, here is the output you would get:
+If you use `TargetChase` function, here is the output you would get:
 
 - **g2d_results**: A score of how "targetable" the target is from OpenTargets
-- **l2g_results**: Full results section
-- **l2g_filtered**: Interesting results and includes the following columns:
-    1. study_id: GWAS study id from GWAS catalog
-    2. gene_id: Ensembl gene ID
-    3. full_l2g_score: L2G model score from OpenTargets which is explained as the probability of the gene being causal at that locus. This score is calculated from the next four columns in the output (find out more about this [here](https://genetics-docs.opentargets.org/our-approach/prioritising-causal-genes-at-gwas-loci-l2g))
-    4. y_proba_logi_distance, y_proba_logi_interaction, y_proba_logi_molecularQTL, y_proba_logi_pathogenicity: The next four columns that are used to calculate the full model
-    5. trait_reported: The annotation for the GWAS study id
-    6. trait_category: The type of trait being studied
-    7. gene_name: Gene name from Ensembl
-    8. IMPC_results: Functional impact of the gene knockout in mice
-    9. rs (and all following columns): SNP information from feline GWAS summary statistics
+- **impc_results**: IMPC mouse knockout phenotype data
 - **plots**: LocusZoom plots for all significant loci (p_wald > 5)
+
+If you use `TargetChaseManual`, you will additionally get:
+
+- **l2g_results**: Full locus-to-gene results from OpenTargets
