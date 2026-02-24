@@ -1,0 +1,14 @@
+##description: Dog GTF file for GWASTargetChase based on CanFam3.1 coordinates
+##provider: Ensembl (coordinates from published literature)
+##format: gtf
+##date: 2026-02-24
+##references: Hayward et al. 2016 Nature Communications; Rimbault et al. 2013 Genome Research
+2	ensembl	gene	50300000	50700000	.	+	.	gene_id "ENSCAFG00000010001"; gene_name "FTO"; gene_biotype "protein_coding";
+2	ensembl	transcript	50300000	50700000	.	+	.	gene_id "ENSCAFG00000010001"; gene_name "FTO"; transcript_id "ENSCAFT00000010001"; gene_biotype "protein_coding";
+2	ensembl	exon	50300000	50301500	.	+	.	gene_id "ENSCAFG00000010001"; gene_name "FTO"; transcript_id "ENSCAFT00000010001"; gene_biotype "protein_coding";
+1	ensembl	gene	16131589	16133079	.	+	.	gene_id "ENSCAFG00000000090"; gene_name "MC4R"; gene_biotype "protein_coding";
+1	ensembl	transcript	16131589	16133079	.	+	.	gene_id "ENSCAFG00000000090"; gene_name "MC4R"; transcript_id "ENSCAFT00000000145"; gene_biotype "protein_coding";
+1	ensembl	exon	16131589	16133079	.	+	.	gene_id "ENSCAFG00000000090"; gene_name "MC4R"; transcript_id "ENSCAFT00000000145"; gene_biotype "protein_coding";
+20	ensembl	gene	24800000	24816000	.	-	.	gene_id "ENSCAFG00000010005"; gene_name "LEP"; gene_biotype "protein_coding";
+20	ensembl	transcript	24800000	24816000	.	-	.	gene_id "ENSCAFG00000010005"; gene_name "LEP"; transcript_id "ENSCAFT00000010005"; gene_biotype "protein_coding";
+20	ensembl	exon	24814000	24816000	.	-	.	gene_id "ENSCAFG00000010005"; gene_name "LEP"; transcript_id "ENSCAFT00000010005"; gene_biotype "protein_coding";
