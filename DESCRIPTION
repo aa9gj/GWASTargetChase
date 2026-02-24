@@ -29,8 +29,6 @@ Imports:
     jsonlite,
     curl,
     S4Vectors,
-    tibble,
-    magrittr,
     ggplot2,
     ggpubr,
     grDevices,

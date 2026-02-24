@@ -16,5 +16,5 @@ l2gPrep(l2gOT, studyOT, humanGTF, ResultsPath = ".")
 \item{ResultsPath}{default is the working directory but you can provide a path of your own ensuring it ends with a /}
 }
 \description{
-Preparation of OpenTarget l2g gwasFollowupMan function
+Preparation of OpenTarget l2g data for TargetChaseManual function
 }

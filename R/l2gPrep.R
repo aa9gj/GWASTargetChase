@@ -1,6 +1,6 @@
 #' l2gPrep
 #'
-#' Preparation of OpenTarget l2g gwasFollowupMan function
+#' Preparation of OpenTarget l2g TargetChaseManual function
 #'
 #' @param l2gOT l2g Data full path (see external documentation for data download from OpenTargets).
 #' @param studyOT study index data full path(see external documentation for data download from OpenTargets)

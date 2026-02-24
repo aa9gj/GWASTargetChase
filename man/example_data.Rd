@@ -42,6 +42,6 @@ example_gwas <- data.table::fread(gwas_file)
 head(example_gwas)
 }
 \seealso{
-\code{\link{gwasFollowup}}, \code{\link{gwasFollowupMan}}
+\code{\link{TargetChase}}, \code{\link{TargetChaseManual}}
 }
 \keyword{datasets}

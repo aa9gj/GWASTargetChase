@@ -1,17 +1,18 @@
-#' gwasFollowupMan
+#' TargetChaseManual
 #'
-#' main package extension function that will take GWAS sumstats, a gtf file, and a pvalue of interest to returns information on the genes of interest but also the genetic
-#' association file and l2g file data prepped with l2gPrep and geneticAssocPrep functions in this package. Only use this function when you have updated genetic and l2g data
-#' from opentargets
+#' Extension function that takes GWAS sumstats, a GTF file, and a p-value threshold,
+#' along with locally prepared OpenTargets and IMPC data files. Use this function when
+#' you have pre-downloaded and prepared genetic association and l2g data from OpenTargets
+#' using the geneticAssocPrep, l2gPrep, and IMPCprep functions.
 #'
-#' @param sumStats GWAS summary statistics file. It assumed a ps, and chr columns.
-#' @param felGTF GTF file
+#' @param sumStats GWAS summary statistics file. Must have columns: ps, chr, p_wald.
+#' @param felGTF GTF file for the species
 #' @param species Species of the GWAS data: "human", "cat", or "dog". For non-human species, Zoonomia orthology is used to translate genes. Default is "cat".
-#' @param pval default is 5*10-8 and you could change but make sure to use standard form
-#' @param ResultsPath default is the working directory but you can provide a path of your own ensuring it ends with a /
-#' @param impc impc data file path
-#' @param assocOT results from geneticAssocPrep function (file path)
-#' @param l2gOT results from l2gPrep function (file path)
+#' @param pval P-value threshold. Default is 5e-8.
+#' @param ResultsPath Directory to write output files. Created if it doesn't exist.
+#' @param impc IMPC data file path (from IMPCprep or downloadData)
+#' @param assocOT OpenTargets genetic association file path (from geneticAssocPrep or downloadData)
+#' @param l2gOT OpenTargets locus-to-gene file path (from l2gPrep or downloadData)
 #' @param zoo_dir Directory containing Zoonomia orthology files. If NULL, uses package extdata.
 #' @return Writes g2d_results.txt and l2g_results.txt to ResultsPath
 #' @importFrom dplyr filter left_join
@@ -19,9 +20,9 @@
 #' @import GenomicRanges
 #' @importFrom rtracklayer import
 #' @importFrom S4Vectors queryHits subjectHits
-#' @export gwasFollowupMan
+#' @export TargetChaseManual
 
-gwasFollowupMan <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", impc = NULL, assocOT, l2gOT, zoo_dir = NULL) {
+TargetChaseManual <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", impc = NULL, assocOT, l2gOT, zoo_dir = NULL) {
   # Validate input files
   if (!nzchar(sumStats) || !file.exists(sumStats)) {
     stop("Summary statistics file not found: '", sumStats, "'")

@@ -1,6 +1,6 @@
 #' geneticAssocPrep
 #'
-#' Preparation of OpenTarget data evidence by data source file for gwasFollowupMan function
+#' Preparation of OpenTarget data evidence by data source file for TargetChaseManual function
 #'
 #' @param assocOT evidence by data source file full path (see external documentation for data download from OpenTargets).
 #' @param diseaseOT Disease data full path(see external documentation for data download from OpenTargets)
