@@ -41,9 +41,17 @@ fetch_opentargets <- function(gene_name, use_cache = TRUE) {
     response <- .post_graphql(api_url, search_query)
     hits <- response$data$search$hits
     if (is.null(hits) || length(hits) == 0) return(data.frame())
-    ensembl_id <- hits$id[1]
+
+    # Handle both data.frame and list responses from jsonlite
+    if (is.data.frame(hits)) {
+      ensembl_id <- hits$id[1]
+    } else {
+      ensembl_id <- hits[[1]]$id
+    }
 
     # Query for genetic associations
+    # Note: datasource id changed from "ot_genetics_portal" to
+    # "gwas_credible_sets" in OpenTargets Platform 25.03+
     assoc_query <- paste0(
       '{ target(ensemblId: "', ensembl_id, '") {',
       '  approvedSymbol',
@@ -67,24 +75,53 @@ fetch_opentargets <- function(gene_name, use_cache = TRUE) {
     rows <- target$associatedDiseases$rows
     if (is.null(rows) || length(rows) == 0) return(data.frame())
 
-    # Build result data.frame
-    df <- data.frame(
-      gene_name = target$approvedSymbol,
-      gene_id = ensembl_id,
-      disease_id = sapply(rows, function(r) r$disease$id),
-      disease_name = sapply(rows, function(r) r$disease$name),
-      overall_score = sapply(rows, function(r) r$score),
-      stringsAsFactors = FALSE
-    )
+    # Build result data.frame — handle both data.frame and list responses.
+    # jsonlite::fromJSON(simplifyVector=TRUE) returns a data.frame for rows,
+    # so sapply(rows, ...) would iterate columns, not rows.
+    if (is.data.frame(rows)) {
+      disease_info <- rows$disease
+      df <- data.frame(
+        gene_name = target$approvedSymbol,
+        gene_id = ensembl_id,
+        disease_id = if (is.data.frame(disease_info)) disease_info$id else sapply(disease_info, `[[`, "id"),
+        disease_name = if (is.data.frame(disease_info)) disease_info$name else sapply(disease_info, `[[`, "name"),
+        overall_score = rows$score,
+        stringsAsFactors = FALSE
+      )
 
-    # Extract genetic_association datasource score if available
-    df$genetic_association_score <- sapply(rows, function(r) {
-      ds <- r$datasourceScores
-      if (is.null(ds) || length(ds) == 0) return(NA_real_)
-      ga <- ds[sapply(ds, function(d) d$componentId) == "ot_genetics_portal", ]
-      if (length(ga) == 0 || is.null(ga[[1]])) return(NA_real_)
-      ga[[1]]$score
-    })
+      # Extract genetic_association datasource score if available
+      df$genetic_association_score <- sapply(seq_len(nrow(rows)), function(i) {
+        ds <- rows$datasourceScores[[i]]
+        if (is.null(ds) || length(ds) == 0) return(NA_real_)
+        if (is.data.frame(ds)) {
+          id_col <- if ("componentId" %in% names(ds)) "componentId" else if ("id" %in% names(ds)) "id" else NULL
+          if (is.null(id_col)) return(NA_real_)
+          idx <- which(ds[[id_col]] %in% c("gwas_credible_sets", "ot_genetics_portal"))
+          if (length(idx) == 0) return(NA_real_)
+          return(ds$score[idx[1]])
+        }
+        NA_real_
+      })
+    } else {
+      # Fallback for list-of-lists response
+      df <- data.frame(
+        gene_name = target$approvedSymbol,
+        gene_id = ensembl_id,
+        disease_id = sapply(rows, function(r) r$disease$id),
+        disease_name = sapply(rows, function(r) r$disease$name),
+        overall_score = sapply(rows, function(r) r$score),
+        stringsAsFactors = FALSE
+      )
+
+      df$genetic_association_score <- sapply(rows, function(r) {
+        ds <- r$datasourceScores
+        if (is.null(ds) || length(ds) == 0) return(NA_real_)
+        ids <- sapply(ds, function(d) if (!is.null(d$componentId)) d$componentId else d$id)
+        idx <- which(ids %in% c("gwas_credible_sets", "ot_genetics_portal"))
+        if (length(idx) == 0) return(NA_real_)
+        ds[[idx[1]]]$score
+      })
+    }
 
     # Keep only rows with genetic association evidence
     df <- df[!is.na(df$genetic_association_score) & df$genetic_association_score > 0, ]

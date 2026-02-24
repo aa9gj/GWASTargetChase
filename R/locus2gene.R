@@ -6,6 +6,6 @@
 #' @param l2g_data data.frame of locus-to-gene data
 #' @return data.frame of matching L2G entries for the given gene
 locus2gene <- function(gene, l2g_data) {
-  df <- l2g_data[grep(paste0("\\b",gene,"\\b"), l2g_data$gene_name), , drop = FALSE]
+  df <- l2g_data[l2g_data$gene_name == gene, , drop = FALSE]
   return(df)
 }
