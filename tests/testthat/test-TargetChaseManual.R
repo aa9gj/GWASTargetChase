@@ -69,7 +69,7 @@ test_that("TargetChaseManual runs end-to-end with mock data", {
   expect_no_error(
     TargetChaseManual(
       sumStats = sumstats,
-      felGTF = gtf,
+      gtf = gtf,
       species = "cat",
       pval = 5e-8,
       ResultsPath = out_dir,
@@ -104,7 +104,7 @@ test_that("TargetChaseManual g2d_results.txt contains expected gene matches", {
 
   TargetChaseManual(
     sumStats = sumstats,
-    felGTF = gtf,
+    gtf = gtf,
     species = "cat",
     pval = 5e-8,
     ResultsPath = out_dir,
@@ -141,7 +141,7 @@ test_that("TargetChaseManual l2g_results.txt contains expected gene matches", {
 
   TargetChaseManual(
     sumStats = sumstats,
-    felGTF = gtf,
+    gtf = gtf,
     species = "cat",
     pval = 5e-8,
     ResultsPath = out_dir,
@@ -177,7 +177,7 @@ test_that("TargetChaseManual adds orthology info to results", {
 
   TargetChaseManual(
     sumStats = sumstats,
-    felGTF = gtf,
+    gtf = gtf,
     species = "cat",
     pval = 5e-8,
     ResultsPath = out_dir,
@@ -214,14 +214,14 @@ test_that("TargetChaseManual with relaxed p-value captures more SNPs", {
   zoo_dir <- system.file("extdata", package = "GWASTargetChase")
 
   TargetChaseManual(
-    sumStats = sumstats, felGTF = gtf, species = "cat",
+    sumStats = sumstats, gtf = gtf, species = "cat",
     pval = 5e-8, ResultsPath = out_dir_strict,
     impc = impc_path, assocOT = assoc_path, l2gOT = l2g_path,
     zoo_dir = zoo_dir
   )
 
   TargetChaseManual(
-    sumStats = sumstats, felGTF = gtf, species = "cat",
+    sumStats = sumstats, gtf = gtf, species = "cat",
     pval = 1e-5, ResultsPath = out_dir_relaxed,
     impc = impc_path, assocOT = assoc_path, l2gOT = l2g_path,
     zoo_dir = zoo_dir
@@ -251,7 +251,7 @@ test_that("TargetChaseManual works with human species (no orthology translation)
   expect_no_error(
     TargetChaseManual(
       sumStats = sumstats,
-      felGTF = gtf,
+      gtf = gtf,
       species = "human",
       pval = 5e-8,
       ResultsPath = out_dir,

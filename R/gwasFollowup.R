@@ -9,7 +9,7 @@
 #' 5. Queries IMPC API for mouse phenotypes
 #'
 #' @param sumStats GWAS summary statistics file. Must have columns: chr, ps, p_wald, gene
-#' @param felGTF GTF file for the species
+#' @param gtf GTF file for the species
 #' @param species Species of the GWAS data: "human", "cat", or "dog". Default is "cat".
 #' @param pval P-value threshold. Default is 5e-8.
 #' @param ResultsPath Directory to write output files. Created if it doesn't exist.
@@ -26,14 +26,14 @@
 #' @importFrom S4Vectors queryHits subjectHits
 #' @export TargetChase
 
-TargetChase <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, ResultsPath = ".", zoo_dir = NULL) {
+TargetChase <- function(sumStats, gtf, species = "cat", pval = 0.00000005, ResultsPath = ".", zoo_dir = NULL) {
   # Validate input files
   if (!nzchar(sumStats) || !file.exists(sumStats)) {
     stop("Summary statistics file not found: '", sumStats, "'. ",
          "Check the file path or verify the package is installed correctly.")
   }
-  if (!nzchar(felGTF) || !file.exists(felGTF)) {
-    stop("GTF file not found: '", felGTF, "'. ",
+  if (!nzchar(gtf) || !file.exists(gtf)) {
+    stop("GTF file not found: '", gtf, "'. ",
          "Check the file path or verify the package is installed correctly.")
   }
   # Create output directory if it doesn't exist
@@ -61,14 +61,14 @@ TargetChase <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, Re
 
   # --- Step 2: Read GTF and find genes within 500kb of each closest gene's TSS ---
   print("Reading the GTF file and filtering for protein coding genes")
-  cat_gtf <- as.data.frame(rtracklayer::import(felGTF))
-  cat_pc_gene_gtf <- filter(cat_gtf, gene_biotype == "protein_coding", type == "gene")
+  species_gtf <- as.data.frame(rtracklayer::import(gtf))
+  pc_gene_gtf <- filter(species_gtf, gene_biotype == "protein_coding", type == "gene")
 
   print("Finding genes within 500kb of each closest gene's TSS")
   all_nearby_genes <- character()
   for (cg in closest_genes) {
     # Find this gene in the GTF
-    gene_row <- cat_pc_gene_gtf[toupper(cat_pc_gene_gtf$gene_name) == toupper(cg), , drop = FALSE]
+    gene_row <- pc_gene_gtf[toupper(pc_gene_gtf$gene_name) == toupper(cg), , drop = FALSE]
     if (nrow(gene_row) == 0) {
       warning("Closest gene '", cg, "' not found in GTF. Skipping.")
       next
@@ -80,9 +80,9 @@ TargetChase <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, Re
     # Find all protein-coding genes within 500kb of TSS
     window_start <- tss - 500000
     window_end <- tss + 500000
-    nearby <- cat_pc_gene_gtf[as.character(cat_pc_gene_gtf$seqnames) == chr &
-                                cat_pc_gene_gtf$start <= window_end &
-                                cat_pc_gene_gtf$end >= window_start, ]
+    nearby <- pc_gene_gtf[as.character(pc_gene_gtf$seqnames) == chr &
+                                pc_gene_gtf$start <= window_end &
+                                pc_gene_gtf$end >= window_start, ]
     all_nearby_genes <- c(all_nearby_genes, nearby$gene_name)
   }
   genes <- unique(all_nearby_genes)
@@ -170,13 +170,13 @@ TargetChase <- function(sumStats, felGTF, species = "cat", pval = 0.00000005, Re
   sig_gwas$start <- sig_gwas$ps - 500000
   sig_gwas$end <- sig_gwas$ps + 500000
   sig_gwas_ranges <- makeGRangesFromDataFrame(sig_gwas, keep.extra.columns = TRUE, seqnames.field = "chr")
-  cat_pc_gene_ranges <- makeGRangesFromDataFrame(cat_pc_gene_gtf, keep.extra.columns = TRUE)
+  pc_gene_ranges <- makeGRangesFromDataFrame(pc_gene_gtf, keep.extra.columns = TRUE)
 
   # SNP to gene mapping for plots
-  hits <- findOverlaps(sig_gwas_ranges, cat_pc_gene_ranges)
+  hits <- findOverlaps(sig_gwas_ranges, pc_gene_ranges)
   if (length(hits) > 0) {
     olap_snp <- as.data.frame(sig_gwas_ranges[queryHits(hits)])
-    olap_gene <- as.data.frame(cat_pc_gene_ranges[subjectHits(hits)])
+    olap_gene <- as.data.frame(pc_gene_ranges[subjectHits(hits)])
     sig_SNP_info <- data.frame(
       rs = olap_snp$rs, ps = olap_snp$ps, p_wald = olap_snp$p_wald,
       locus = olap_snp$locus, gene_name = olap_gene$gene_name,

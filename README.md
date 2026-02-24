@@ -47,7 +47,7 @@ library(GWASTargetChase)
 
 TargetChase(
   sumStats = "my_gwas_results.txt",
-  felGTF = "my_species.gtf",
+  gtf = "my_species.gtf",
   species = "cat",      # Options: "human", "mouse", "cat", "dog"
   pval = 5e-8,
   ResultsPath = "results/"
@@ -65,7 +65,7 @@ paths <- downloadData(destdir = "my_data")
 # Run with local files
 TargetChaseManual(
   sumStats = "my_gwas_results.txt",
-  felGTF = "my_species.gtf",
+  gtf = "my_species.gtf",
   species = "cat",
   pval = 5e-8,
   ResultsPath = "results/",
@@ -113,7 +113,7 @@ gtf_file <- system.file("extdata", "example_cat_gtf.gtf",
 # Run with sample data
 TargetChase(
   sumStats = gwas_file,
-  felGTF = gtf_file,
+  gtf = gtf_file,
   species = "cat",
   pval = 5e-8,
   ResultsPath = tempdir()
